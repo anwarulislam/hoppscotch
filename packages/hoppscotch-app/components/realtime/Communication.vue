@@ -1,0 +1,192 @@
+<template>
+  <div class="flex flex-col flex-1">
+    <div
+      class="sticky z-10 flex items-center justify-between pl-4 border-b bg-primary border-dividerLight top-upperMobileSecondaryStickyFold sm:top-upperSecondaryStickyFold"
+    >
+      <span class="flex items-center">
+        <label class="font-semibold text-secondaryLight">
+          {{ $t("websocket.communication") }}
+        </label>
+        <tippy
+          ref="contentTypeOptions"
+          interactive
+          trigger="click"
+          theme="popover"
+          arrow
+        >
+          <template #trigger>
+            <span class="select-wrapper">
+              <ButtonSecondary
+                :label="contentType || $t('state.none').toLowerCase()"
+                class="pr-8 ml-2 rounded-none"
+              />
+            </span>
+          </template>
+          <div class="flex flex-col" role="menu">
+            <SmartItem
+              v-for="(contentTypeItem, index) in validContentTypes"
+              :key="`contentTypeItem-${index}`"
+              :label="contentTypeItem"
+              :info-icon="contentTypeItem === contentType ? 'done' : ''"
+              :active-info-icon="contentTypeItem === contentType"
+              @click.native="
+                () => {
+                  contentType = contentTypeItem
+                  $refs.contentTypeOptions.tippy().hide()
+                }
+              "
+            />
+          </div>
+        </tippy>
+      </span>
+      <div class="flex">
+        <ButtonSecondary
+          v-tippy="{ theme: 'tooltip', delay: [500, 20], allowHTML: true }"
+          :title="`${t('action.send')}`"
+          :label="`${t('action.send')}`"
+          svg="send"
+          class="rounded-none !text-accent !hover:text-accentDark"
+          @click.native="sendMessage()"
+        />
+        <ButtonSecondary
+          v-tippy="{ theme: 'tooltip' }"
+          to="https://docs.hoppscotch.io/features/body"
+          blank
+          :title="t('app.wiki')"
+          svg="help-circle"
+        />
+        <ButtonSecondary
+          v-tippy="{ theme: 'tooltip' }"
+          :title="t('state.linewrap')"
+          :class="{ '!text-accent': linewrapEnabled }"
+          svg="wrap-text"
+          @click.native.prevent="linewrapEnabled = !linewrapEnabled"
+        />
+        <ButtonSecondary
+          v-tippy="{ theme: 'tooltip' }"
+          :title="t('action.clear')"
+          svg="trash-2"
+          @click.native="clearContent"
+        />
+        <ButtonSecondary
+          v-if="contentType && contentType.endsWith('json')"
+          ref="prettifyRequest"
+          v-tippy="{ theme: 'tooltip' }"
+          :title="t('action.prettify')"
+          :svg="prettifyIcon"
+          @click.native="prettifyRequestBody"
+        />
+        <label for="payload">
+          <ButtonSecondary
+            v-tippy="{ theme: 'tooltip' }"
+            :title="t('import.title')"
+            svg="file-plus"
+            @click.native="$refs.payload.click()"
+          />
+        </label>
+        <input
+          ref="payload"
+          class="input"
+          name="payload"
+          type="file"
+          @change="uploadPayload"
+        />
+      </div>
+    </div>
+    <div ref="wsCommunicationBody" class="flex flex-col flex-1"></div>
+  </div>
+</template>
+<script setup lang="ts">
+import { computed, reactive, ref } from "@nuxtjs/composition-api"
+import { pipe } from "fp-ts/function"
+import * as TO from "fp-ts/TaskOption"
+import * as A from "fp-ts/Array"
+import { useCodemirror } from "~/helpers/editor/codemirror"
+import jsonLinter from "~/helpers/editor/linting/json"
+import { getEditorLangForMimeType } from "~/helpers/editorutils"
+import { readFileAsText } from "~/helpers/functional/files"
+import { useI18n, useToast } from "~/helpers/utils/composables"
+import {
+  isJSONContentType,
+  knownContentTypes,
+} from "~/helpers/utils/contenttypes"
+
+const emit = defineEmits<{
+  (e: "send-message", body: string): void
+}>()
+
+const t = useI18n()
+const toast = useToast()
+// const currentIndex = ref(-1) // index of the message log array to put in input box
+
+const linewrapEnabled = ref(true)
+const wsCommunicationBody = ref<any | null>(null)
+const prettifyIcon = ref("wand")
+
+const validContentTypes = pipe(
+  Object.keys(knownContentTypes),
+  A.filter((i) => i !== "multipart/form-data"),
+  A.filter((i) => i !== "application/x-www-form-urlencoded")
+)
+const contentType = ref("text/plain")
+const WSBody = ref("")
+
+const rawInputEditorLang = computed(() =>
+  getEditorLangForMimeType(contentType.value)
+)
+const langLinter = computed(() =>
+  isJSONContentType(contentType.value) ? jsonLinter : null
+)
+
+useCodemirror(
+  wsCommunicationBody,
+  WSBody,
+  reactive({
+    extendedEditorConfig: {
+      lineWrapping: linewrapEnabled,
+      mode: rawInputEditorLang,
+      placeholder: t("websocket.message").toString(),
+    },
+    linter: langLinter,
+    completer: null,
+    environmentHighlights: true,
+  })
+)
+
+const clearContent = () => {
+  WSBody.value = ""
+}
+
+const sendMessage = () => {
+  emit("send-message", WSBody.value)
+}
+
+const uploadPayload = async (e: InputEvent) => {
+  await pipe(
+    (e.target as HTMLInputElement).files?.[0],
+    TO.of,
+    TO.chain(TO.fromPredicate((f): f is File => f !== undefined)),
+    TO.chain(readFileAsText),
+
+    TO.matchW(
+      () => toast.error(`${t("action.choose_file")}`),
+      (result) => {
+        WSBody.value = result
+        toast.success(`${t("state.file_imported")}`)
+      }
+    )
+  )()
+}
+const prettifyRequestBody = () => {
+  try {
+    const jsonObj = JSON.parse(WSBody.value)
+    WSBody.value = JSON.stringify(jsonObj, null, 2)
+    prettifyIcon.value = "check"
+  } catch (e) {
+    console.error(e)
+    prettifyIcon.value = "info"
+    toast.error(`${t("error.json_prettify_invalid_body")}`)
+  }
+  setTimeout(() => (prettifyIcon.value = "wand"), 1000)
+}
+</script>
