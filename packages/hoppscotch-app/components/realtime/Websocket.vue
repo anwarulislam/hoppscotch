@@ -30,159 +30,141 @@
           />
         </div>
       </div>
-      <div
-        class="sticky z-10 flex items-center justify-between pl-4 border-b bg-primary border-dividerLight top-upperPrimaryStickyFold"
+      <SmartTabs
+        v-model="selectedTab"
+        styles="sticky bg-primary top-upperMobilePrimaryStickyFold sm:top-upperPrimaryStickyFold z-10"
       >
-        <label class="font-semibold text-secondaryLight">
-          {{ t("websocket.protocols") }}
-        </label>
-        <div class="flex">
-          <ButtonSecondary
-            v-tippy="{ theme: 'tooltip' }"
-            :title="t('action.clear_all')"
-            svg="trash-2"
-            @click.native="clearContent"
-          />
-          <ButtonSecondary
-            v-tippy="{ theme: 'tooltip' }"
-            :title="t('add.new')"
-            svg="plus"
-            @click.native="addProtocol"
-          />
-        </div>
-      </div>
-      <draggable
-        v-model="protocols"
-        animation="250"
-        handle=".draggable-handle"
-        draggable=".draggable-content"
-        ghost-class="cursor-move"
-        chosen-class="bg-primaryLight"
-        drag-class="cursor-grabbing"
-      >
-        <div
-          v-for="(protocol, index) of protocols"
-          :key="`protocol-${index}`"
-          class="flex border-b divide-x divide-dividerLight border-dividerLight draggable-content group"
+        <SmartTab
+          :id="'communication'"
+          :label="`${$t('websocket.communication')}`"
         >
-          <span>
-            <ButtonSecondary
-              svg="grip-vertical"
-              class="cursor-auto text-primary hover:text-primary"
-              :class="{
-                'draggable-handle group-hover:text-secondaryLight !cursor-grab':
-                  index !== protocols?.length - 1,
-              }"
-              tabindex="-1"
+          <RealtimeCommunication
+            @send-message="connectionState ? sendMessage($event) : null"
+          ></RealtimeCommunication>
+        </SmartTab>
+        <SmartTab :id="'protocols'" :label="`${$t('websocket.protocols')}`">
+          <div
+            class="sticky z-10 flex items-center justify-between pl-4 border-b bg-primary border-dividerLight top-upperPrimaryStickyFold"
+          >
+            <label class="font-semibold text-secondaryLight">
+              {{ t("websocket.protocols") }}
+            </label>
+            <div class="flex">
+              <ButtonSecondary
+                v-tippy="{ theme: 'tooltip' }"
+                :title="t('action.clear_all')"
+                svg="trash-2"
+                @click.native="clearContent"
+              />
+              <ButtonSecondary
+                v-tippy="{ theme: 'tooltip' }"
+                :title="t('add.new')"
+                svg="plus"
+                @click.native="addProtocol"
+              />
+            </div>
+          </div>
+          <draggable
+            v-model="protocols"
+            animation="250"
+            handle=".draggable-handle"
+            draggable=".draggable-content"
+            ghost-class="cursor-move"
+            chosen-class="bg-primaryLight"
+            drag-class="cursor-grabbing"
+          >
+            <div
+              v-for="(protocol, index) of protocols"
+              :key="`protocol-${index}`"
+              class="flex border-b divide-x divide-dividerLight border-dividerLight draggable-content group"
+            >
+              <span>
+                <ButtonSecondary
+                  svg="grip-vertical"
+                  class="cursor-auto text-primary hover:text-primary"
+                  :class="{
+                    'draggable-handle group-hover:text-secondaryLight !cursor-grab':
+                      index !== protocols?.length - 1,
+                  }"
+                  tabindex="-1"
+                />
+              </span>
+              <input
+                v-model="protocol.value"
+                class="flex flex-1 px-4 py-2 bg-transparent"
+                :placeholder="`${t('count.protocol', { count: index + 1 })}`"
+                name="message"
+                type="text"
+                autocomplete="off"
+                @change="
+                  updateProtocol(index, {
+                    value: $event.target.value,
+                    active: protocol.active,
+                  })
+                "
+              />
+              <span>
+                <ButtonSecondary
+                  v-tippy="{ theme: 'tooltip' }"
+                  :title="
+                    protocol.hasOwnProperty('active')
+                      ? protocol.active
+                        ? t('action.turn_off')
+                        : t('action.turn_on')
+                      : t('action.turn_off')
+                  "
+                  :svg="
+                    protocol.hasOwnProperty('active')
+                      ? protocol.active
+                        ? 'check-circle'
+                        : 'circle'
+                      : 'check-circle'
+                  "
+                  color="green"
+                  @click.native="
+                    updateProtocol(index, {
+                      value: protocol.value,
+                      active: !protocol.active,
+                    })
+                  "
+                />
+              </span>
+              <span>
+                <ButtonSecondary
+                  v-tippy="{ theme: 'tooltip' }"
+                  :title="t('action.remove')"
+                  svg="trash"
+                  color="red"
+                  @click.native="deleteProtocol(index)"
+                />
+              </span>
+            </div>
+          </draggable>
+          <div
+            v-if="protocols.length === 0"
+            class="flex flex-col items-center justify-center p-4 text-secondaryLight"
+          >
+            <img
+              :src="`/images/states/${$colorMode.value}/add_category.svg`"
+              loading="lazy"
+              class="inline-flex flex-col object-contain object-center w-16 h-16 my-4"
+              :alt="`${t('empty.protocols')}`"
             />
-          </span>
-          <input
-            v-model="protocol.value"
-            class="flex flex-1 px-4 py-2 bg-transparent"
-            :placeholder="`${t('count.protocol', { count: index + 1 })}`"
-            name="message"
-            type="text"
-            autocomplete="off"
-            @change="
-              updateProtocol(index, {
-                value: $event.target.value,
-                active: protocol.active,
-              })
-            "
-          />
-          <span>
-            <ButtonSecondary
-              v-tippy="{ theme: 'tooltip' }"
-              :title="
-                protocol.hasOwnProperty('active')
-                  ? protocol.active
-                    ? t('action.turn_off')
-                    : t('action.turn_on')
-                  : t('action.turn_off')
-              "
-              :svg="
-                protocol.hasOwnProperty('active')
-                  ? protocol.active
-                    ? 'check-circle'
-                    : 'circle'
-                  : 'check-circle'
-              "
-              color="green"
-              @click.native="
-                updateProtocol(index, {
-                  value: protocol.value,
-                  active: !protocol.active,
-                })
-              "
-            />
-          </span>
-          <span>
-            <ButtonSecondary
-              v-tippy="{ theme: 'tooltip' }"
-              :title="t('action.remove')"
-              svg="trash"
-              color="red"
-              @click.native="deleteProtocol(index)"
-            />
-          </span>
-        </div>
-      </draggable>
-      <div
-        v-if="protocols.length === 0"
-        class="flex flex-col items-center justify-center p-4 text-secondaryLight"
-      >
-        <img
-          :src="`/images/states/${$colorMode.value}/add_category.svg`"
-          loading="lazy"
-          class="inline-flex flex-col object-contain object-center w-16 h-16 my-4"
-          :alt="`${t('empty.protocols')}`"
-        />
-        <span class="mb-4 text-center">
-          {{ t("empty.protocols") }}
-        </span>
-      </div>
+            <span class="mb-4 text-center">
+              {{ t("empty.protocols") }}
+            </span>
+          </div>
+        </SmartTab>
+      </SmartTabs>
     </template>
     <template #secondary>
       <RealtimeLog :title="t('websocket.log')" :log="log" />
-    </template>
-    <template #sidebar>
-      <div class="flex items-center justify-between p-4">
-        <label
-          for="websocket-message"
-          class="font-semibold text-secondaryLight"
-        >
-          {{ t("websocket.communication") }}
-        </label>
-      </div>
-      <div class="flex px-4 space-x-2">
-        <input
-          id="websocket-message"
-          v-model="communication.input"
-          name="message"
-          type="text"
-          autocomplete="off"
-          :disabled="!connectionState"
-          :placeholder="`${t('websocket.message')}`"
-          class="input"
-          @keyup.enter="connectionState ? sendMessage() : null"
-          @keyup.up="connectionState ? walkHistory('up') : null"
-          @keyup.down="connectionState ? walkHistory('down') : null"
-        />
-        <ButtonPrimary
-          id="send"
-          name="send"
-          :disabled="!connectionState"
-          :label="t('action.send')"
-          @click.native="sendMessage"
-        />
-      </div>
     </template>
   </AppPaneLayout>
 </template>
 
 <script setup lang="ts">
 import {
-  defineComponent,
   computed,
   ref,
   watch,
@@ -222,6 +204,7 @@ const nuxt = useNuxt()
 const t = useI18n()
 const $toast = useToast()
 
+const selectedTab = ref("communication")
 const url = useStream(WSEndpoint$, "", setWSEndpoint)
 const protocols = useStream(WSProtocols$, [], setWSProtocols)
 const connectionState = useStream(
@@ -239,11 +222,6 @@ const log = useStream(WSLog$, [], setWSLog)
 
 // DATA
 const isUrlValid = ref(true)
-const communication = {
-  input: "",
-}
-
-const currentIndex = ref(-1) // index of the message log array to put in input box
 const activeProtocols = ref<string[]>([])
 
 const urlValid = computed(() => isUrlValid)
@@ -266,12 +244,6 @@ watch(
   },
   { deep: true }
 )
-
-defineComponent({
-  components: {
-    draggable,
-  },
-})
 
 onMounted(() => {
   if (process.browser) {
@@ -308,7 +280,6 @@ const toggleConnection = () => {
 }
 
 const connect = () => {
-  console.log("Connecting...")
   log.value = [
     {
       payload: `${t("state.connecting_to", { name: url.value })}`,
@@ -394,47 +365,13 @@ const handleError = (error: any) => {
     })
 }
 
-const sendMessage = () => {
-  const message = communication.input
+const sendMessage = (message: string) => {
   socket.value.send(message)
   addWSLogLine({
     payload: message,
     source: "client",
     ts: new Date().toLocaleTimeString(),
   })
-  communication.input = ""
-}
-
-const walkHistory = (direction: "up" | "down") => {
-  const clientMessages = log.value.filter(({ source }) => source === "client")
-  const length = clientMessages.length
-  switch (direction) {
-    case "up":
-      if (length > 0 && currentIndex.value !== 0) {
-        // does nothing if message log is empty or the currentIndex is 0 when up arrow is pressed
-        if (currentIndex.value === -1) {
-          currentIndex.value = length - 1
-          communication.input = clientMessages[currentIndex.value].payload
-        } else if (currentIndex.value === 0) {
-          communication.input = clientMessages[0].payload
-        } else if (currentIndex.value > 0) {
-          currentIndex.value = currentIndex.value - 1
-          communication.input = clientMessages[currentIndex.value].payload
-        }
-      }
-      break
-    case "down":
-      if (length > 0 && currentIndex.value > -1) {
-        if (currentIndex.value === length - 1) {
-          currentIndex.value = -1
-          communication.input = ""
-        } else if (currentIndex.value < length - 1) {
-          currentIndex.value = currentIndex.value + 1
-          communication.input = clientMessages[currentIndex.value].payload
-        }
-      }
-      break
-  }
 }
 
 const addProtocol = () => {

@@ -44,6 +44,7 @@
           v-tippy="{ theme: 'tooltip', delay: [500, 20], allowHTML: true }"
           :title="`${t('action.send')}`"
           :label="`${t('action.send')}`"
+          :disabled="!WSBody"
           svg="send"
           class="rounded-none !text-accent !hover:text-accentDark"
           @click.native="sendMessage()"
@@ -158,7 +159,10 @@ const clearContent = () => {
 }
 
 const sendMessage = () => {
-  emit("send-message", WSBody.value)
+  if (WSBody.value) {
+    emit("send-message", WSBody.value)
+    WSBody.value = ""
+  }
 }
 
 const uploadPayload = async (e: InputEvent) => {
