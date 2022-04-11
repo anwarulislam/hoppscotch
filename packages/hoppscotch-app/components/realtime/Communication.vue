@@ -1,11 +1,25 @@
 <template>
   <div class="flex flex-col flex-1">
+    <div v-if="showEventField" class="flex items-center justify-between p-4">
+      <label for="events" class="font-semibold text-secondaryLight mr-4">
+        {{ t("socketio.events") }}
+      </label>
+      <input
+        id="event_name"
+        v-model="eventName"
+        class="input"
+        name="event_name"
+        :placeholder="`${t('socketio.event_name')}`"
+        type="text"
+        autocomplete="off"
+      />
+    </div>
     <div
       class="sticky z-10 flex items-center justify-between pl-4 border-b bg-primary border-dividerLight top-upperMobileSecondaryStickyFold sm:top-upperSecondaryStickyFold"
     >
       <span class="flex items-center">
         <label class="font-semibold text-secondaryLight">
-          {{ $t("websocket.communication") }}
+          {{ $t("websocket.message") }}
         </label>
         <tippy
           ref="contentTypeOptions"
@@ -112,8 +126,21 @@ import {
   knownContentTypes,
 } from "~/helpers/utils/contenttypes"
 
+defineProps({
+  showEventField: {
+    type: Boolean,
+    default: false,
+  },
+})
+
 const emit = defineEmits<{
-  (e: "send-message", body: string): void
+  (
+    e: "send-message",
+    body: {
+      eventName: string
+      message: string
+    }
+  ): void
 }>()
 
 const t = useI18n()
@@ -130,6 +157,7 @@ const validContentTypes = pipe(
   A.filter((i) => i !== "application/x-www-form-urlencoded")
 )
 const contentType = ref("text/plain")
+const eventName = ref("")
 const WSBody = ref("")
 
 const rawInputEditorLang = computed(() =>
@@ -160,7 +188,10 @@ const clearContent = () => {
 
 const sendMessage = () => {
   if (WSBody.value) {
-    emit("send-message", WSBody.value)
+    emit("send-message", {
+      eventName: eventName.value,
+      message: WSBody.value,
+    })
     WSBody.value = ""
   }
 }

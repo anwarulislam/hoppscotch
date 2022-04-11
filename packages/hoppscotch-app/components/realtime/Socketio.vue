@@ -71,216 +71,159 @@
           />
         </div>
       </div>
-      <div
-        class="sticky z-10 flex items-center justify-between pl-4 border-b bg-primary border-dividerLight top-upperPrimaryStickyFold"
+
+      <SmartTabs
+        v-model="selectedTab"
+        styles="sticky bg-primary top-upperMobilePrimaryStickyFold sm:top-upperPrimaryStickyFold z-10"
       >
-        <span class="flex items-center">
-          <label class="font-semibold text-secondaryLight">
-            {{ t("authorization.type") }}
-          </label>
-          <tippy
-            ref="authTypeOptions"
-            interactive
-            trigger="click"
-            theme="popover"
-            arrow
-          >
-            <template #trigger>
-              <span class="select-wrapper">
-                <ButtonSecondary
-                  class="pr-8 ml-2 rounded-none"
-                  :label="authType"
-                />
-              </span>
-            </template>
-            <div class="flex flex-col" role="menu">
-              <SmartItem
-                label="None"
-                :icon="
-                  authType === 'None'
-                    ? 'radio_button_checked'
-                    : 'radio_button_unchecked'
-                "
-                :active="authType === 'None'"
-                @click.native="
-                  () => {
-                    authType = 'None'
-                    authTypeOptions.tippy().hide()
-                  }
-                "
-              />
-              <SmartItem
-                label="Bearer Token"
-                :icon="
-                  authType === 'Bearer'
-                    ? 'radio_button_checked'
-                    : 'radio_button_unchecked'
-                "
-                :active="authType === 'Bearer'"
-                @click.native="
-                  () => {
-                    authType = 'Bearer'
-                    authTypeOptions.tippy().hide()
-                  }
-                "
-              />
-            </div>
-          </tippy>
-        </span>
-        <div class="flex">
-          <SmartCheckbox
-            :on="authActive"
-            class="px-2"
-            @change="authActive = !authActive"
-          >
-            {{ t("state.enabled") }}
-          </SmartCheckbox>
-          <ButtonSecondary
-            v-tippy="{ theme: 'tooltip' }"
-            to="https://docs.hoppscotch.io/features/authorization"
-            blank
-            :title="t('app.wiki')"
-            svg="help-circle"
-          />
-          <ButtonSecondary
-            v-tippy="{ theme: 'tooltip' }"
-            :title="t('action.clear')"
-            svg="trash-2"
-            @click.native="clearContent"
-          />
-        </div>
-      </div>
-      <div
-        v-if="authType === 'None'"
-        class="flex flex-col items-center justify-center p-4 text-secondaryLight"
-      >
-        <img
-          :src="`/images/states/${$colorMode.value}/login.svg`"
-          loading="lazy"
-          class="inline-flex flex-col object-contain object-center w-16 h-16 my-4"
-          :alt="`${t('empty.authorization')}`"
-        />
-        <span class="pb-4 text-center">
-          This SocketIO connection does not use any authentication.
-        </span>
-        <ButtonSecondary
-          outline
-          :label="t('app.documentation')"
-          to="https://docs.hoppscotch.io/features/authorization"
-          blank
-          svg="external-link"
-          reverse
-          class="mb-4"
-        />
-      </div>
-      <div
-        v-if="authType === 'Bearer'"
-        class="flex flex-1 border-b border-dividerLight"
-      >
-        <div class="w-2/3 border-r border-dividerLight">
-          <div class="flex flex-1 border-b border-dividerLight">
-            <SmartEnvInput v-model="bearerToken" placeholder="Token" />
-          </div>
-        </div>
-        <div
-          class="sticky h-full p-4 overflow-auto bg-primary top-upperTertiaryStickyFold min-w-46 max-w-1/3 z-9"
+        <SmartTab
+          :id="'communication'"
+          :label="`${$t('websocket.communication')}`"
         >
-          <div class="p-2">
-            <div class="pb-2 text-secondaryLight">
-              {{ t("helpers.authorization") }}
+          <RealtimeCommunication
+            :show-event-field="true"
+            @send-message="connectionState ? sendMessage($event) : null"
+          ></RealtimeCommunication>
+        </SmartTab>
+        <SmartTab :id="'protocols'" :label="`${t('request.authorization')}`">
+          <div
+            class="sticky z-10 flex items-center justify-between pl-4 border-b bg-primary border-dividerLight top-upperPrimaryStickyFold"
+          >
+            <span class="flex items-center">
+              <label class="font-semibold text-secondaryLight">
+                {{ t("authorization.type") }}
+              </label>
+              <tippy
+                ref="authTypeOptions"
+                interactive
+                trigger="click"
+                theme="popover"
+                arrow
+              >
+                <template #trigger>
+                  <span class="select-wrapper">
+                    <ButtonSecondary
+                      class="pr-8 ml-2 rounded-none"
+                      :label="authType"
+                    />
+                  </span>
+                </template>
+                <div class="flex flex-col" role="menu">
+                  <SmartItem
+                    label="None"
+                    :icon="
+                      authType === 'None'
+                        ? 'radio_button_checked'
+                        : 'radio_button_unchecked'
+                    "
+                    :active="authType === 'None'"
+                    @click.native="
+                      () => {
+                        authType = 'None'
+                        authTypeOptions.tippy().hide()
+                      }
+                    "
+                  />
+                  <SmartItem
+                    label="Bearer Token"
+                    :icon="
+                      authType === 'Bearer'
+                        ? 'radio_button_checked'
+                        : 'radio_button_unchecked'
+                    "
+                    :active="authType === 'Bearer'"
+                    @click.native="
+                      () => {
+                        authType = 'Bearer'
+                        authTypeOptions.tippy().hide()
+                      }
+                    "
+                  />
+                </div>
+              </tippy>
+            </span>
+            <div class="flex">
+              <SmartCheckbox
+                :on="authActive"
+                class="px-2"
+                @change="authActive = !authActive"
+              >
+                {{ t("state.enabled") }}
+              </SmartCheckbox>
+              <ButtonSecondary
+                v-tippy="{ theme: 'tooltip' }"
+                to="https://docs.hoppscotch.io/features/authorization"
+                blank
+                :title="t('app.wiki')"
+                svg="help-circle"
+              />
+              <ButtonSecondary
+                v-tippy="{ theme: 'tooltip' }"
+                :title="t('action.clear')"
+                svg="trash-2"
+                @click.native="clearContent"
+              />
             </div>
-            <SmartAnchor
-              class="link"
-              :label="`${t('authorization.learn')} \xA0 →`"
+          </div>
+          <div
+            v-if="authType === 'None'"
+            class="flex flex-col items-center justify-center p-4 text-secondaryLight"
+          >
+            <img
+              :src="`/images/states/${$colorMode.value}/login.svg`"
+              loading="lazy"
+              class="inline-flex flex-col object-contain object-center w-16 h-16 my-4"
+              :alt="`${t('empty.authorization')}`"
+            />
+            <span class="pb-4 text-center">
+              This SocketIO connection does not use any authentication.
+            </span>
+            <ButtonSecondary
+              outline
+              :label="t('app.documentation')"
               to="https://docs.hoppscotch.io/features/authorization"
               blank
+              svg="external-link"
+              reverse
+              class="mb-4"
             />
           </div>
-        </div>
-      </div>
+          <div
+            v-if="authType === 'Bearer'"
+            class="flex flex-1 border-b border-dividerLight"
+          >
+            <div class="w-2/3 border-r border-dividerLight">
+              <div class="flex flex-1 border-b border-dividerLight">
+                <SmartEnvInput v-model="bearerToken" placeholder="Token" />
+              </div>
+            </div>
+            <div
+              class="sticky h-full p-4 overflow-auto bg-primary top-upperTertiaryStickyFold min-w-46 max-w-1/3 z-9"
+            >
+              <div class="p-2">
+                <div class="pb-2 text-secondaryLight">
+                  {{ t("helpers.authorization") }}
+                </div>
+                <SmartAnchor
+                  class="link"
+                  :label="`${t('authorization.learn')} \xA0 →`"
+                  to="https://docs.hoppscotch.io/features/authorization"
+                  blank
+                />
+              </div>
+            </div>
+          </div>
+        </SmartTab>
+      </SmartTabs>
     </template>
     <template #secondary>
       <RealtimeLog :title="t('socketio.log')" :log="log" />
-    </template>
-    <template #sidebar>
-      <div class="flex items-center justify-between p-4">
-        <label for="events" class="font-semibold text-secondaryLight">
-          {{ t("socketio.events") }}
-        </label>
-      </div>
-      <div class="flex px-4">
-        <input
-          id="event_name"
-          v-model="communication.eventName"
-          class="input"
-          name="event_name"
-          :placeholder="`${t('socketio.event_name')}`"
-          type="text"
-          autocomplete="off"
-          :disabled="!connectionState"
-        />
-      </div>
-      <div class="flex items-center justify-between p-4">
-        <label class="font-semibold text-secondaryLight">
-          {{ t("socketio.communication") }}
-        </label>
-        <div class="flex">
-          <ButtonSecondary
-            v-tippy="{ theme: 'tooltip' }"
-            :title="t('add.new')"
-            svg="plus"
-            @click.native="addCommunicationInput"
-          />
-        </div>
-      </div>
-      <div class="flex flex-col px-4 pb-4 space-y-2">
-        <div
-          v-for="(input, index) of communication.inputs"
-          :key="`input-${index}`"
-        >
-          <div class="flex space-x-2">
-            <input
-              v-model="communication.inputs[index]"
-              class="input"
-              name="message"
-              :placeholder="`${t('count.message', { count: index + 1 })}`"
-              type="text"
-              autocomplete="off"
-              :disabled="!connectionState"
-              @keyup.enter="connectionState ? sendMessage() : null"
-            />
-            <ButtonSecondary
-              v-if="index + 1 !== communication.inputs.length"
-              v-tippy="{ theme: 'tooltip' }"
-              :title="t('action.remove')"
-              svg="trash"
-              color="red"
-              outline
-              @click.native="removeCommunicationInput(index)"
-            />
-            <ButtonPrimary
-              v-if="index + 1 === communication.inputs.length"
-              id="send"
-              name="send"
-              :disabled="!connectionState"
-              :label="t('action.send')"
-              @click.native="sendMessage"
-            />
-          </div>
-        </div>
-      </div>
     </template>
   </AppPaneLayout>
 </template>
 
 <script setup lang="ts">
-import {
-  ref,
-  onUnmounted,
-  computed,
-  reactive,
-  watch,
-} from "@nuxtjs/composition-api"
+import { ref, onUnmounted, computed, watch } from "@nuxtjs/composition-api"
 // All Socket.IO client version imports
 import ClientV2 from "socket.io-client-v2"
 import { io as ClientV3 } from "socket.io-client-v3"
@@ -316,6 +259,8 @@ const t = useI18n()
 const toast = useToast()
 const nuxt = useNuxt()
 
+const selectedTab = ref("communication")
+
 const socketIoClients = {
   v4: ClientV4,
   v3: ClientV3,
@@ -341,10 +286,6 @@ const authTypeOptions = ref<any>(null)
 const versionOptions = ref<any>(null)
 
 const isUrlValid = ref(true)
-const communication = reactive({
-  eventName: "",
-  inputs: [""],
-})
 const authType = ref("None")
 const bearerToken = ref("")
 const authActive = ref(true)
@@ -379,12 +320,6 @@ const debouncer = debounce(function () {
   worker.postMessage({ type: "socketio", url: url.value })
 }, 1000)
 
-const removeCommunicationInput = (index: number) => {
-  nuxt.value.$delete(communication.inputs, index)
-}
-const addCommunicationInput = () => {
-  communication.inputs.push("")
-}
 const toggleConnection = () => {
   // If it is connecting:
   if (!connectionState.value) return connect()
@@ -491,20 +426,10 @@ const handleError = (error: any) => {
       ts: new Date().toLocaleTimeString(),
     })
 }
-const sendMessage = () => {
-  const eventName = communication.eventName
-  const messages = (communication.inputs || [])
-    .map((input) => {
-      try {
-        return JSON.parse(input)
-      } catch (e) {
-        return input
-      }
-    })
-    .filter((message) => !!message)
-
+const sendMessage = (event: { message: string; eventName: string }) => {
+  const { message, eventName } = event
   if (io.value) {
-    io.value.emit(eventName, ...messages, (data: object) => {
+    io.value.emit(eventName, message, (data: object) => {
       // receive response from server
       addSIOLogLine({
         payload: `[${eventName}] ${JSON.stringify(data)}`,
@@ -514,11 +439,10 @@ const sendMessage = () => {
     })
 
     addSIOLogLine({
-      payload: `[${eventName}] ${JSON.stringify(messages)}`,
+      payload: `[${eventName}] ${JSON.stringify(message)}`,
       source: "client",
       ts: new Date().toLocaleTimeString(),
     })
-    communication.inputs = [""]
   }
 }
 const onSelectVersion = (version: string) => {

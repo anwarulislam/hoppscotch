@@ -365,7 +365,8 @@ const handleError = (error: any) => {
     })
 }
 
-const sendMessage = (message: string) => {
+const sendMessage = (event: { message: string; eventName: string }) => {
+  const { message } = event
   socket.value.send(message)
   addWSLogLine({
     payload: message,
