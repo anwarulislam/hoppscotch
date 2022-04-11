@@ -39,7 +39,7 @@
           :label="`${$t('websocket.communication')}`"
         >
           <RealtimeCommunication
-            @send-message="connectionState ? sendMessage($event) : null"
+            @send-message="sendMessage($event)"
           ></RealtimeCommunication>
         </SmartTab>
         <SmartTab :id="'protocols'" :label="`${$t('websocket.protocols')}`">
@@ -366,6 +366,7 @@ const handleError = (error: any) => {
 }
 
 const sendMessage = (event: { message: string; eventName: string }) => {
+  if (!connectionState.value) return
   const { message } = event
   socket.value.send(message)
   addWSLogLine({

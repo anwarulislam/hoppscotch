@@ -84,7 +84,7 @@
           @click.native="clearContent"
         />
         <ButtonSecondary
-          v-if="contentType && contentType.endsWith('json')"
+          v-if="contentType && contentType == 'JSON'"
           ref="prettifyRequest"
           v-tippy="{ theme: 'tooltip' }"
           :title="t('action.prettify')"
@@ -115,16 +115,11 @@
 import { computed, reactive, ref } from "@nuxtjs/composition-api"
 import { pipe } from "fp-ts/function"
 import * as TO from "fp-ts/TaskOption"
-import * as A from "fp-ts/Array"
 import { useCodemirror } from "~/helpers/editor/codemirror"
 import jsonLinter from "~/helpers/editor/linting/json"
-import { getEditorLangForMimeType } from "~/helpers/editorutils"
 import { readFileAsText } from "~/helpers/functional/files"
 import { useI18n, useToast } from "~/helpers/utils/composables"
-import {
-  isJSONContentType,
-  knownContentTypes,
-} from "~/helpers/utils/contenttypes"
+import { isJSONContentType } from "~/helpers/utils/contenttypes"
 
 defineProps({
   showEventField: {
@@ -151,12 +146,14 @@ const linewrapEnabled = ref(true)
 const wsCommunicationBody = ref<any | null>(null)
 const prettifyIcon = ref("wand")
 
-const validContentTypes = pipe(
-  Object.keys(knownContentTypes),
-  A.filter((i) => i !== "multipart/form-data"),
-  A.filter((i) => i !== "application/x-www-form-urlencoded")
-)
-const contentType = ref("text/plain")
+const knownContentTypes = {
+  JSON: "application/ld+json",
+  Raw: "text/x-yaml",
+}
+
+const validContentTypes = Object.keys(knownContentTypes)
+
+const contentType = ref("JSON")
 const eventName = ref("")
 const WSBody = ref("")
 
@@ -166,6 +163,10 @@ const rawInputEditorLang = computed(() =>
 const langLinter = computed(() =>
   isJSONContentType(contentType.value) ? jsonLinter : null
 )
+
+const getEditorLangForMimeType = (mimeType: string) => {
+  return (knownContentTypes as any)[mimeType]
+}
 
 useCodemirror(
   wsCommunicationBody,

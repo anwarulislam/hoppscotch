@@ -82,7 +82,7 @@
         >
           <RealtimeCommunication
             :show-event-field="true"
-            @send-message="connectionState ? sendMessage($event) : null"
+            @send-message="sendMessage($event)"
           ></RealtimeCommunication>
         </SmartTab>
         <SmartTab :id="'protocols'" :label="`${t('request.authorization')}`">
@@ -427,6 +427,7 @@ const handleError = (error: any) => {
     })
 }
 const sendMessage = (event: { message: string; eventName: string }) => {
+  if (!connectionState.value) return
   const { message, eventName } = event
   if (io.value) {
     io.value.emit(eventName, message, (data: object) => {
