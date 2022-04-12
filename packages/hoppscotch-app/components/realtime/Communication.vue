@@ -1,9 +1,6 @@
 <template>
   <div class="flex flex-col flex-1">
     <div v-if="showEventField" class="flex items-center justify-between p-4">
-      <label for="events" class="font-semibold text-secondaryLight mr-4">
-        {{ t("socketio.events") }}
-      </label>
       <input
         id="event_name"
         v-model="eventName"
