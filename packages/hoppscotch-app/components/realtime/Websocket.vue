@@ -164,238 +164,74 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  ref,
-  watch,
-  onUnmounted,
-  onMounted,
-} from "@nuxtjs/composition-api"
-import debounce from "lodash/debounce"
+import { computed, onUnmounted, ref, watch } from "@nuxtjs/composition-api"
 import draggable from "vuedraggable"
-import { logHoppRequestRunToAnalytics } from "~/helpers/fb/analytics"
-import {
-  setWSEndpoint,
-  WSEndpoint$,
-  WSProtocols$,
-  setWSProtocols,
-  addWSProtocol,
-  deleteWSProtocol,
-  updateWSProtocol,
-  deleteAllWSProtocols,
-  WSSocket$,
-  setWSSocket,
-  setWSConnectionState,
-  setWSConnectingState,
-  WSConnectionState$,
-  WSConnectingState$,
-  addWSLogLine,
-  WSLog$,
-  setWSLog,
-} from "~/newstore/WebSocketSession"
+import WSSessionAdapter from "~/helpers/realtime/WSSessionAdapter"
 import {
   useI18n,
+  useNuxt,
+  useReadonlyStream,
   useStream,
   useToast,
-  useNuxt,
 } from "~/helpers/utils/composables"
+import {
+  deleteAllWSProtocols,
+  setWSEndpoint,
+  setWSProtocols,
+  WSEndpoint$,
+  WSLog$,
+  WSProtocols$,
+} from "~/newstore/WebSocketSession"
 
 const nuxt = useNuxt()
 const t = useI18n()
-const $toast = useToast()
+const toast = useToast()
+const adapter = new WSSessionAdapter(nuxt.value, toast, t)
 
 const selectedTab = ref("communication")
 const url = useStream(WSEndpoint$, "", setWSEndpoint)
 const protocols = useStream(WSProtocols$, [], setWSProtocols)
-const connectionState = useStream(
-  WSConnectionState$,
-  false,
-  setWSConnectionState
-)
-const connectingState = useStream(
-  WSConnectingState$,
-  false,
-  setWSConnectingState
-)
-const socket = useStream(WSSocket$, null, setWSSocket)
-const log = useStream(WSLog$, [], setWSLog)
+const connectionState = useReadonlyStream(adapter.connection$, false)
+const connectingState = useReadonlyStream(adapter.connecting$, false)
+const log = useReadonlyStream(WSLog$, [])
 
 // DATA
 const isUrlValid = ref(true)
-const activeProtocols = ref<string[]>([])
 
 const urlValid = computed(() => isUrlValid)
-let worker: Worker
 
 watch(url, (newUrl) => {
-  if (newUrl) debouncer()
-})
-
-watch(
-  protocols,
-  (newProtocols) => {
-    activeProtocols.value = newProtocols
-      .filter((item) =>
-        Object.prototype.hasOwnProperty.call(item, "active")
-          ? item.active === true
-          : true
-      )
-      .map(({ value }) => value)
-  },
-  { deep: true }
-)
-
-onMounted(() => {
-  if (process.browser) {
-    worker = nuxt.value.$worker.createRejexWorker()
-    worker.addEventListener("message", workerResponseHandler)
-  }
+  if (newUrl) adapter.debouncer(url.value)
 })
 
 onUnmounted(() => {
-  if (worker) worker.terminate()
+  adapter.terminate()
 })
 
 const clearContent = () => {
   deleteAllWSProtocols()
 }
 
-const debouncer = debounce(function () {
-  worker.postMessage({ type: "ws", url: url.value })
-}, 1000)
-
-const workerResponseHandler = ({
-  data,
-}: {
-  data: { url: string; result: boolean }
-}) => {
-  if (data.url === url.value) isUrlValid.value = data.result
-}
-
 const toggleConnection = () => {
   // If it is connecting:
-  if (!connectionState.value) return connect()
+  if (!connectionState.value) return adapter.connect(url.value)
   // Otherwise, it's disconnecting.
-  else return disconnect()
-}
-
-const connect = () => {
-  log.value = [
-    {
-      payload: `${t("state.connecting_to", { name: url.value })}`,
-      source: "info",
-      color: "var(--accent-color)",
-      ts: "",
-    },
-  ]
-  try {
-    connectingState.value = true
-    socket.value = new WebSocket(url.value, activeProtocols.value)
-
-    socket.value.onopen = () => {
-      connectingState.value = false
-      connectionState.value = true
-      log.value = [
-        {
-          payload: t("state.connected_to", { name: url.value }) as string,
-          source: "info",
-          color: "var(--accent-color)",
-          ts: new Date().toLocaleTimeString(),
-        },
-      ]
-      $toast.success(t("state.connected") as string)
-    }
-
-    socket.value.onerror = (error) => {
-      handleError(error)
-    }
-
-    socket.value.onclose = () => {
-      connectionState.value = false
-      addWSLogLine({
-        payload: t("state.disconnected_from", { name: url.value }) as string,
-        source: "info",
-        color: "#ff5555",
-        ts: new Date().toLocaleTimeString(),
-      })
-      $toast.error(t("state.disconnected") as string)
-    }
-
-    socket.value.onmessage = ({ data }) => {
-      addWSLogLine({
-        payload: data,
-        source: "server",
-        ts: new Date().toLocaleTimeString(),
-      })
-    }
-  } catch (e) {
-    handleError(e)
-    $toast.error(t("error.something_went_wrong") as string)
-  }
-
-  logHoppRequestRunToAnalytics({
-    platform: "wss",
-  })
-}
-
-const disconnect = () => {
-  if (socket.value) {
-    socket.value.close()
-    connectionState.value = false
-    connectingState.value = false
-  }
-}
-
-const handleError = (error: any) => {
-  disconnect()
-  connectionState.value = false
-
-  addWSLogLine({
-    payload: `${t("error.something_went_wrong")}`,
-    source: "info",
-    color: "#ff5555",
-    ts: new Date().toLocaleTimeString(),
-  })
-  if (error !== null)
-    addWSLogLine({
-      payload: error,
-      source: "info",
-      color: "#ff5555",
-      ts: new Date().toLocaleTimeString(),
-    })
+  else return adapter.disconnect()
 }
 
 const sendMessage = (event: { message: string; eventName: string }) => {
-  if (!connectionState.value) return
-  const { message } = event
-  socket.value.send(message)
-  addWSLogLine({
-    payload: message,
-    source: "client",
-    ts: new Date().toLocaleTimeString(),
-  })
+  adapter.sendMessage(event)
 }
 
 const addProtocol = () => {
-  addWSProtocol({ value: "", active: true })
+  adapter.addProtocol()
 }
 
 const deleteProtocol = (index: number) => {
-  const oldProtocols = protocols.value.slice()
-  deleteWSProtocol(index)
-  $toast.success(`${t("state.deleted")}`, {
-    duration: 4000,
-    action: {
-      text: `${t("action.undo")}`,
-      onClick: (_, toastObject) => {
-        protocols.value = oldProtocols
-        toastObject.goAway()
-      },
-    },
-  })
+  adapter.deleteProtocol(index)
 }
 
 const updateProtocol = (index: number, updated: any) => {
-  updateWSProtocol(index, updated)
+  adapter.updateProtocol(index, updated)
 }
 </script>

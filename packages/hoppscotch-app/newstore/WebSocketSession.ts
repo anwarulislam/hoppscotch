@@ -195,7 +195,7 @@ export function updateWSProtocol(
   })
 }
 
-export function setWSSocket(socket: WebSocket) {
+export function setWSSocket(socket: WebSocket | null) {
   WSSessionStore.dispatch({
     dispatcher: "setSocket",
     payload: {
