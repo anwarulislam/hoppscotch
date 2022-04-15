@@ -52,8 +52,8 @@
   </AppPaneLayout>
 </template>
 
-<script>
-import { defineComponent } from "@nuxtjs/composition-api"
+<script setup lang="ts">
+import { ref, computed, watch, onUnmounted } from "@nuxtjs/composition-api"
 import "splitpanes/dist/splitpanes.css"
 import debounce from "lodash/debounce"
 import { logHoppRequestRunToAnalytics } from "~/helpers/fb/analytics"
@@ -72,151 +72,154 @@ import {
   setSSELog,
   addSSELogLine,
 } from "~/newstore/SSESession"
-import { useStream } from "~/helpers/utils/composables"
+import {
+  useNuxt,
+  useStream,
+  useToast,
+  useI18n,
+} from "~/helpers/utils/composables"
 
-export default defineComponent({
-  setup() {
-    return {
-      connectionSSEState: useStream(
-        SSEConnectionState$,
-        false,
-        setSSEConnectionState
-      ),
-      connectingState: useStream(
-        SSEConnectingState$,
-        false,
-        setSSEConnectingState
-      ),
-      server: useStream(SSEEndpoint$, "", setSSEEndpoint),
-      eventType: useStream(SSEEventType$, "", setSSEEventType),
-      sse: useStream(SSESocket$, null, setSSESocket),
-      log: useStream(SSELog$, [], setSSELog),
-    }
-  },
-  data() {
-    return {
-      isUrlValid: true,
-    }
-  },
-  computed: {
-    serverValid() {
-      return this.isUrlValid
+const t = useI18n()
+const nuxt = useNuxt()
+const toast = useToast()
+
+const connectionSSEState = useStream(
+  SSEConnectionState$,
+  false,
+  setSSEConnectionState
+)
+const connectingState = useStream(
+  SSEConnectingState$,
+  false,
+  setSSEConnectingState
+)
+const server = useStream(SSEEndpoint$, "", setSSEEndpoint)
+const eventType = useStream(SSEEventType$, "", setSSEEventType)
+const sse = useStream(SSESocket$, null, setSSESocket)
+const log = useStream(SSELog$, [], setSSELog)
+
+const isUrlValid = ref(true)
+const serverValid = computed(() => isUrlValid.value)
+
+let worker: Worker
+
+const debouncer = debounce(function () {
+  worker.postMessage({ type: "sse", url: server.value })
+}, 1000)
+
+watch(server, (url) => {
+  if (url) debouncer()
+})
+
+const workerResponseHandler = ({
+  data,
+}: {
+  data: { url: string; result: boolean }
+}) => {
+  if (data.url === server.value) isUrlValid.value = data.result
+}
+
+if (process.browser) {
+  worker = nuxt.value.$worker.createRejexWorker()
+  worker.addEventListener("message", workerResponseHandler)
+}
+
+// METHODS
+
+const toggleSSEConnection = () => {
+  // If it is connecting:
+  if (!connectionSSEState.value) return start()
+  // Otherwise, it's disconnecting.
+  else return stop()
+}
+const start = () => {
+  connectingState.value = true
+  log.value = [
+    {
+      payload: t("state.connecting_to", { name: server.value }) as string,
+      source: "info",
+      color: "var(--accent-color)",
+      ts: "",
     },
-  },
-  watch: {
-    server() {
-      this.debouncer()
-    },
-  },
-  created() {
-    if (process.browser) {
-      this.worker = this.$worker.createRejexWorker()
-      this.worker.addEventListener("message", this.workerResponseHandler)
-    }
-  },
-  destroyed() {
-    this.worker.terminate()
-  },
-  methods: {
-    debouncer: debounce(function () {
-      this.worker.postMessage({ type: "sse", url: this.server })
-    }, 1000),
-    workerResponseHandler({ data }) {
-      if (data.url === this.url) this.isUrlValid = data.result
-    },
-    toggleSSEConnection() {
-      // If it is connecting:
-      if (!this.connectionSSEState) return this.start()
-      // Otherwise, it's disconnecting.
-      else return this.stop()
-    },
-    start() {
-      this.connectingState = true
-      this.log = [
-        {
-          payload: this.$t("state.connecting_to", { name: this.server }),
-          source: "info",
-          color: "var(--accent-color)",
-        },
-      ]
-      if (typeof EventSource !== "undefined") {
-        try {
-          this.sse = new EventSource(this.server)
-          this.sse.onopen = () => {
-            this.connectingState = false
-            this.connectionSSEState = true
-            this.log = [
-              {
-                payload: this.$t("state.connected_to", { name: this.server }),
-                source: "info",
-                color: "var(--accent-color)",
-                ts: new Date().toLocaleTimeString(),
-              },
-            ]
-            this.$toast.success(this.$t("state.connected"))
-          }
-          this.sse.onerror = () => {
-            this.handleSSEError()
-          }
-          this.sse.onclose = () => {
-            this.connectionSSEState = false
-            addSSELogLine({
-              payload: this.$t("state.disconnected_from", {
-                name: this.server,
-              }),
-              source: "info",
-              color: "#ff5555",
-              ts: new Date().toLocaleTimeString(),
-            })
-            this.$toast.error(this.$t("state.disconnected"))
-          }
-          this.sse.addEventListener(this.eventType, ({ data }) => {
-            addSSELogLine({
-              payload: data,
-              source: "server",
-              ts: new Date().toLocaleTimeString(),
-            })
-          })
-        } catch (e) {
-          this.handleSSEError(e)
-          this.$toast.error(this.$t("error.something_went_wrong"))
-        }
-      } else {
-        this.log = [
+  ]
+  if (typeof EventSource !== "undefined") {
+    try {
+      sse.value = new EventSource(server.value)
+      sse.value.onopen = () => {
+        connectingState.value = false
+        connectionSSEState.value = true
+        log.value = [
           {
-            payload: this.$t("error.browser_support_sse"),
+            payload: t("state.connected_to", { name: server.value }) as string,
             source: "info",
-            color: "#ff5555",
+            color: "var(--accent-color)",
             ts: new Date().toLocaleTimeString(),
           },
         ]
+        toast.success(t("state.connected") as string)
       }
-
-      logHoppRequestRunToAnalytics({
-        platform: "sse",
-      })
-    },
-    handleSSEError(error) {
-      this.stop()
-      this.connectionSSEState = false
-      addSSELogLine({
-        payload: this.$t("error.something_went_wrong"),
-        source: "info",
-        color: "#ff5555",
-        ts: new Date().toLocaleTimeString(),
-      })
-      if (error !== null)
+      sse.value.onerror = handleSSEError
+      sse.value.onclose = () => {
+        connectionSSEState.value = false
         addSSELogLine({
-          payload: error,
+          payload: t("state.disconnected_from", {
+            name: server.value,
+          }) as string,
           source: "info",
           color: "#ff5555",
           ts: new Date().toLocaleTimeString(),
         })
-    },
-    stop() {
-      this.sse.close()
-      this.sse.onclose()
-    },
-  },
+        toast.error(t("state.disconnected") as string)
+      }
+      sse.value.addEventListener(eventType.value, ({ data }) => {
+        addSSELogLine({
+          payload: data,
+          source: "server",
+          ts: new Date().toLocaleTimeString(),
+        })
+      })
+    } catch (e) {
+      handleSSEError(e)
+      toast.error(t("error.something_went_wrong") as string)
+    }
+  } else {
+    log.value = [
+      {
+        payload: t("error.browser_support_sse") as string,
+        source: "info",
+        color: "#ff5555",
+        ts: new Date().toLocaleTimeString(),
+      },
+    ]
+  }
+
+  logHoppRequestRunToAnalytics({
+    platform: "sse",
+  })
+}
+const handleSSEError = (error: any) => {
+  stop()
+  connectionSSEState.value = false
+  addSSELogLine({
+    payload: t("error.something_went_wrong") as string,
+    source: "info",
+    color: "#ff5555",
+    ts: new Date().toLocaleTimeString(),
+  })
+  if (error !== null)
+    addSSELogLine({
+      payload: error,
+      source: "info",
+      color: "#ff5555",
+      ts: new Date().toLocaleTimeString(),
+    })
+}
+const stop = () => {
+  sse.value.close()
+  // sse.value.onclose()
+}
+
+onUnmounted(() => {
+  worker.terminate()
 })
 </script>
