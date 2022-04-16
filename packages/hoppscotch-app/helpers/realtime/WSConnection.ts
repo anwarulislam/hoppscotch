@@ -2,14 +2,15 @@ import { BehaviorSubject } from "rxjs"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
 
 export type WSEvent = { time: number } & (
-  | { type: "CONNECTION"; manual: boolean }
-  | { type: "DISCONNECTION"; manual: boolean }
+  | { type: "CONNECTING"; manual: boolean }
+  | { type: "CONNECTED"; manual: boolean }
   | { type: "MESSAGE_SENT"; message: string }
   | { type: "MESSAGE_RECEIVED"; message: string }
+  | { type: "DISCONNECTED"; manual: boolean }
   | { type: "ERROR"; error: string }
 )
 
-export default class WSConnection {
+export class WebSocketConnection {
   connecting$: BehaviorSubject<boolean>
   connection$: BehaviorSubject<boolean>
 
@@ -26,15 +27,17 @@ export default class WSConnection {
   connect(url: string, protocols: string[]) {
     try {
       this.connecting$.next(true)
-      this.socket.next(new WebSocket(url, protocols))
+      this.socket = new BehaviorSubject<WebSocket>(
+        new WebSocket(url, protocols)
+      )
 
       this.socket.value.onopen = () => {
         this.connecting$.next(false)
         this.connection$.next(true)
         this.events$.next([
           {
+            type: "CONNECTED",
             time: Date.now(),
-            type: "CONNECTION",
             manual: true,
           },
         ])
@@ -48,8 +51,8 @@ export default class WSConnection {
         this.connection$.next(false)
         this.events$.next([
           {
+            type: "DISCONNECTED",
             time: Date.now(),
-            type: "DISCONNECTION",
             manual: true,
           },
         ])
@@ -79,21 +82,26 @@ export default class WSConnection {
       {
         time: Date.now(),
         type: "ERROR",
-        error: error.message,
+        error,
       },
     ])
-    if (error !== null)
-      this.events$.next([
-        {
-          time: Date.now(),
-          type: "ERROR",
-          error: error.message,
-        },
-      ])
+  }
+
+  sendMessage(event: { message: string; eventName: string }) {
+    if (!this.connection$.value) return
+    const { message } = event
+    this.socket.value?.send(message)
+    this.events$.next([
+      {
+        time: Date.now(),
+        type: "MESSAGE_SENT",
+        message,
+      },
+    ])
   }
 
   disconnect() {
-    if (this.socket.value) {
+    if (this.socket?.value) {
       this.socket.value.close()
       this.connecting$.next(false)
       this.connection$.next(false)

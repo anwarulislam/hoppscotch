@@ -163,10 +163,15 @@
   </AppPaneLayout>
 </template>
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from "@nuxtjs/composition-api"
+import {
+  computed,
+  ref,
+  watch,
+  onUnmounted,
+  onMounted,
+} from "@nuxtjs/composition-api"
 import debounce from "lodash/debounce"
 import draggable from "vuedraggable"
-import { logHoppRequestRunToAnalytics } from "~/helpers/fb/analytics"
 import {
   setWSEndpoint,
   WSEndpoint$,
@@ -176,12 +181,8 @@ import {
   deleteWSProtocol,
   updateWSProtocol,
   deleteAllWSProtocols,
-  WSSocket$,
-  setWSSocket,
   setWSConnectionState,
   setWSConnectingState,
-  WSConnectionState$,
-  WSConnectingState$,
   addWSLogLine,
   WSLog$,
   setWSLog,
@@ -192,6 +193,7 @@ import {
   useToast,
   useNuxt,
 } from "~/helpers/utils/composables"
+import { WebSocketConnection, WSEvent } from "~/helpers/realtime/WSConnection"
 
 const nuxt = useNuxt()
 const t = useI18n()
@@ -200,17 +202,19 @@ const toast = useToast()
 const selectedTab = ref("communication")
 const url = useStream(WSEndpoint$, "", setWSEndpoint)
 const protocols = useStream(WSProtocols$, [], setWSProtocols)
+
+const WSConnection = new WebSocketConnection()
+
 const connectionState = useStream(
-  WSConnectionState$,
+  WSConnection.connection$,
   false,
   setWSConnectionState
 )
 const connectingState = useStream(
-  WSConnectingState$,
+  WSConnection.connecting$,
   false,
   setWSConnectingState
 )
-const socket = useStream(WSSocket$, null, setWSSocket)
 const log = useStream(WSLog$, [], setWSLog)
 // DATA
 const isUrlValid = ref(true)
@@ -245,6 +249,73 @@ if (process.browser) {
   worker.addEventListener("message", workerResponseHandler)
 }
 
+onMounted(() => {
+  WSConnection.events$.subscribe((events: WSEvent[]) => {
+    const event = events[events.length - 1]
+    switch (event?.type) {
+      case "CONNECTING":
+        log.value = [
+          {
+            payload: `${t("state.connecting_to", { name: url.value })}`,
+            source: "info",
+            color: "var(--accent-color)",
+            ts: "",
+          },
+        ]
+        break
+
+      case "CONNECTED":
+        log.value = [
+          {
+            payload: `${t("state.connected_to", { name: url.value })}`,
+            source: "info",
+            color: "var(--accent-color)",
+            ts: new Date().toLocaleTimeString(),
+          },
+        ]
+        toast.success(`${t("state.connected")}`)
+        break
+
+      case "MESSAGE_SENT":
+        addWSLogLine({
+          payload: event.message,
+          source: "client",
+          ts: new Date().toLocaleTimeString(),
+        })
+        break
+
+      case "MESSAGE_RECEIVED":
+        addWSLogLine({
+          payload: event.message,
+          source: "server",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "ERROR":
+        addWSLogLine({
+          payload:
+            event.error ||
+            (t("state.disconnected_from", { name: url.value }) as string),
+          source: "info",
+          color: "#ff5555",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "DISCONNECTED":
+        addWSLogLine({
+          payload: t("state.disconnected_from", { name: url.value }) as string,
+          source: "info",
+          color: "#ff5555",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        toast.error(`${t("state.disconnected")}`)
+        break
+    }
+  })
+})
+
 onUnmounted(() => {
   if (worker) worker.terminate()
 })
@@ -257,97 +328,23 @@ const debouncer = debounce(function () {
 
 const toggleConnection = () => {
   // If it is connecting:
-  if (!connectionState.value) return connect()
+  if (!connectionState.value) {
+    log.value = [
+      {
+        payload: `${t("state.connecting_to", { name: url.value })}`,
+        source: "info",
+        color: "var(--accent-color)",
+        ts: "",
+      },
+    ]
+    return WSConnection.connect(url.value, activeProtocols.value)
+  }
   // Otherwise, it's disconnecting.
-  else return disconnect()
+  else return WSConnection.disconnect()
 }
 
-const connect = () => {
-  log.value = [
-    {
-      payload: `${t("state.connecting_to", { name: url.value })}`,
-      source: "info",
-      color: "var(--accent-color)",
-      ts: "",
-    },
-  ]
-  try {
-    connectingState.value = true
-    socket.value = new WebSocket(url.value, activeProtocols.value)
-    socket.value.onopen = () => {
-      connectingState.value = false
-      connectionState.value = true
-      log.value = [
-        {
-          payload: t("state.connected_to", { name: url.value }) as string,
-          source: "info",
-          color: "var(--accent-color)",
-          ts: new Date().toLocaleTimeString(),
-        },
-      ]
-      toast.success(t("state.connected") as string)
-    }
-    socket.value.onerror = (error) => {
-      handleError(error)
-    }
-    socket.value.onclose = () => {
-      connectionState.value = false
-      addWSLogLine({
-        payload: t("state.disconnected_from", { name: url.value }) as string,
-        source: "info",
-        color: "#ff5555",
-        ts: new Date().toLocaleTimeString(),
-      })
-      toast.error(t("state.disconnected") as string)
-    }
-    socket.value.onmessage = ({ data }) => {
-      addWSLogLine({
-        payload: data,
-        source: "server",
-        ts: new Date().toLocaleTimeString(),
-      })
-    }
-  } catch (e) {
-    handleError(e)
-    toast.error(t("error.something_went_wrong") as string)
-  }
-  logHoppRequestRunToAnalytics({
-    platform: "wss",
-  })
-}
-const disconnect = () => {
-  if (socket.value) {
-    socket.value.close()
-    connectionState.value = false
-    connectingState.value = false
-  }
-}
-const handleError = (error: any) => {
-  disconnect()
-  connectionState.value = false
-  addWSLogLine({
-    payload: `${t("error.something_went_wrong")}`,
-    source: "info",
-    color: "#ff5555",
-    ts: new Date().toLocaleTimeString(),
-  })
-  if (error !== null)
-    addWSLogLine({
-      payload: error,
-      source: "info",
-      color: "#ff5555",
-      ts: new Date().toLocaleTimeString(),
-    })
-}
 const sendMessage = (event: { message: string; eventName: string }) => {
-  if (!connectionState.value) return
-  const { message } = event
-  socket.value?.send(message)
-  addWSLogLine({
-    payload: message,
-    source: "client",
-    ts: new Date().toLocaleTimeString(),
-  })
+  WSConnection.sendMessage(event)
 }
 const addProtocol = () => {
   addWSProtocol({ value: "", active: true })
