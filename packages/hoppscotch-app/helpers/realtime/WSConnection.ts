@@ -10,62 +10,54 @@ export type WSEvent = { time: number } & (
   | { type: "ERROR"; error: string }
 )
 
-export class WebSocketConnection {
-  connecting$: BehaviorSubject<boolean>
-  connection$: BehaviorSubject<boolean>
+export type ConnectionState = "CONNECTING" | "CONNECTED" | "DISCONNECTED"
 
-  socket!: BehaviorSubject<WebSocket>
-
+export class WSConnection {
+  connectionState$: BehaviorSubject<ConnectionState>
   events$: BehaviorSubject<WSEvent[]>
-
+  socket: WebSocket | undefined
   constructor() {
-    this.connecting$ = new BehaviorSubject<boolean>(false)
-    this.connection$ = new BehaviorSubject<boolean>(false)
+    this.connectionState$ = new BehaviorSubject<ConnectionState>("DISCONNECTED")
     this.events$ = new BehaviorSubject<WSEvent[]>([])
+  }
+
+  private addEvent(event: WSEvent) {
+    this.events$.next([...this.events$.value, event])
   }
 
   connect(url: string, protocols: string[]) {
     try {
-      this.connecting$.next(true)
-      this.socket = new BehaviorSubject<WebSocket>(
-        new WebSocket(url, protocols)
-      )
+      this.connectionState$.next("CONNECTING")
+      this.socket = new WebSocket(url, protocols)
 
-      this.socket.value.onopen = () => {
-        this.connecting$.next(false)
-        this.connection$.next(true)
-        this.events$.next([
-          {
-            type: "CONNECTED",
-            time: Date.now(),
-            manual: true,
-          },
-        ])
+      this.socket.onopen = () => {
+        this.connectionState$.next("CONNECTED")
+        this.addEvent({
+          type: "CONNECTED",
+          time: Date.now(),
+          manual: true,
+        })
       }
 
-      this.socket.value.onerror = (error) => {
+      this.socket.onerror = (error) => {
         this.handleError(error)
       }
 
-      this.socket.value.onclose = () => {
-        this.connection$.next(false)
-        this.events$.next([
-          {
-            type: "DISCONNECTED",
-            time: Date.now(),
-            manual: true,
-          },
-        ])
+      this.socket.onclose = () => {
+        this.connectionState$.next("DISCONNECTED")
+        this.addEvent({
+          type: "DISCONNECTED",
+          time: Date.now(),
+          manual: true,
+        })
       }
 
-      this.socket.value.onmessage = ({ data }) => {
-        this.events$.next([
-          {
-            time: Date.now(),
-            type: "MESSAGE_RECEIVED",
-            message: data,
-          },
-        ])
+      this.socket.onmessage = ({ data }) => {
+        this.addEvent({
+          time: Date.now(),
+          type: "MESSAGE_RECEIVED",
+          message: data,
+        })
       }
     } catch (e) {
       this.handleError(e)
@@ -78,33 +70,27 @@ export class WebSocketConnection {
 
   private handleError(error: any) {
     this.disconnect()
-    this.events$.next([
-      {
-        time: Date.now(),
-        type: "ERROR",
-        error,
-      },
-    ])
+    this.addEvent({
+      time: Date.now(),
+      type: "ERROR",
+      error,
+    })
   }
 
   sendMessage(event: { message: string; eventName: string }) {
-    if (!this.connection$.value) return
+    if (this.connectionState$.value === "DISCONNECTED") return
     const { message } = event
-    this.socket.value?.send(message)
-    this.events$.next([
-      {
-        time: Date.now(),
-        type: "MESSAGE_SENT",
-        message,
-      },
-    ])
+    this.socket?.send(message)
+    this.addEvent({
+      time: Date.now(),
+      type: "MESSAGE_SENT",
+      message,
+    })
   }
 
   disconnect() {
-    if (this.socket?.value) {
-      this.socket.value.close()
-      this.connecting$.next(false)
-      this.connection$.next(false)
+    if (this.socket) {
+      this.socket.close()
     }
   }
 }
