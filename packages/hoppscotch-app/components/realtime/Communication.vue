@@ -55,7 +55,7 @@
           v-tippy="{ theme: 'tooltip', delay: [500, 20], allowHTML: true }"
           :title="`${t('action.send')}`"
           :label="`${t('action.send')}`"
-          :disabled="!WSBody"
+          :disabled="!communicationBody"
           svg="send"
           class="rounded-none !text-accent !hover:text-accentDark"
           @click.native="sendMessage()"
@@ -112,6 +112,7 @@
 import { computed, reactive, ref } from "@nuxtjs/composition-api"
 import { pipe } from "fp-ts/function"
 import * as TO from "fp-ts/TaskOption"
+import * as O from "fp-ts/Option"
 import { useCodemirror } from "~/helpers/editor/codemirror"
 import jsonLinter from "~/helpers/editor/linting/json"
 import { readFileAsText } from "~/helpers/functional/files"
@@ -150,9 +151,9 @@ const knownContentTypes = {
 
 const validContentTypes = Object.keys(knownContentTypes)
 
-const contentType = ref("JSON")
+const contentType = ref<keyof typeof knownContentTypes>("JSON")
 const eventName = ref("")
-const WSBody = ref("")
+const communicationBody = ref("")
 
 const rawInputEditorLang = computed(() =>
   getEditorLangForMimeType(contentType.value)
@@ -161,13 +162,13 @@ const langLinter = computed(() =>
   isJSONContentType(contentType.value) ? jsonLinter : null
 )
 
-const getEditorLangForMimeType = (mimeType: string) => {
-  return (knownContentTypes as any)[mimeType]
+const getEditorLangForMimeType = (mimeType: keyof typeof knownContentTypes) => {
+  return knownContentTypes[mimeType]
 }
 
 useCodemirror(
   wsCommunicationBody,
-  WSBody,
+  communicationBody,
   reactive({
     extendedEditorConfig: {
       lineWrapping: linewrapEnabled,
@@ -181,39 +182,37 @@ useCodemirror(
 )
 
 const clearContent = () => {
-  WSBody.value = ""
+  communicationBody.value = ""
 }
 
 const sendMessage = () => {
-  if (WSBody.value) {
+  if (communicationBody.value) {
     emit("send-message", {
       eventName: eventName.value,
-      message: WSBody.value,
+      message: communicationBody.value,
     })
-    WSBody.value = ""
+    communicationBody.value = ""
   }
 }
 
 const uploadPayload = async (e: InputEvent) => {
-  await pipe(
+  const result = await pipe(
     (e.target as HTMLInputElement).files?.[0],
-    TO.of,
-    TO.chain(TO.fromPredicate((f): f is File => f !== undefined)),
-    TO.chain(readFileAsText),
-
-    TO.matchW(
-      () => toast.error(`${t("action.choose_file")}`),
-      (result) => {
-        WSBody.value = result
-        toast.success(`${t("state.file_imported")}`)
-      }
-    )
+    TO.fromNullable,
+    TO.chain(readFileAsText)
   )()
+
+  if (O.isSome(result)) {
+    communicationBody.value = result.value
+    toast.success(`${t("state.file_imported")}`)
+  } else {
+    toast.error(`${t("action.choose_file")}`)
+  }
 }
 const prettifyRequestBody = () => {
   try {
-    const jsonObj = JSON.parse(WSBody.value)
-    WSBody.value = JSON.stringify(jsonObj, null, 2)
+    const jsonObj = JSON.parse(communicationBody.value)
+    communicationBody.value = JSON.stringify(jsonObj, null, 2)
     prettifyIcon.value = "check"
   } catch (e) {
     console.error(e)
