@@ -10,10 +10,12 @@ import {
 
 type SocketIO = SocketV2 | SocketV3 | SocketV4
 
+export type ClientVersion = "v4" | "v3" | "v2"
+
 type HoppSIORequest = {
   endpoint: string
   path: string
-  version: string
+  version: ClientVersion
 }
 
 type HoppSIOSession = {
@@ -63,7 +65,10 @@ const dispatchers = defineDispatchers({
       },
     }
   },
-  setVersion(curr: HoppSIOSession, { newVersion }: { newVersion: string }) {
+  setVersion(
+    curr: HoppSIOSession,
+    { newVersion }: { newVersion: ClientVersion }
+  ) {
     return {
       request: {
         ...curr.request,
