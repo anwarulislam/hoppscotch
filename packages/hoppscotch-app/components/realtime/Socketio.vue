@@ -223,7 +223,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, computed, watch } from "@nuxtjs/composition-api"
+import {
+  ref,
+  onUnmounted,
+  computed,
+  watch,
+  onMounted,
+} from "@nuxtjs/composition-api"
 // All Socket.IO client version imports
 import ClientV2 from "socket.io-client-v2"
 import { io as ClientV3 } from "socket.io-client-v3"
@@ -247,6 +253,7 @@ import {
   SIOLog$,
   setSIOLog,
   addSIOLogLine,
+  ClientVersion,
 } from "~/newstore/SocketIOSession"
 import {
   useStream,
@@ -268,7 +275,7 @@ const socketIoClients = {
 }
 
 const url = useStream(SIOEndpoint$, "", setSIOEndpoint)
-const clientVersion = useStream(SIOVersion$, "", setSIOVersion)
+const clientVersion = useStream(SIOVersion$, "v4", setSIOVersion)
 const path = useStream(SIOPath$, "", setSIOPath)
 const connectingState = useStream(
   SIOConnectingState$,
@@ -283,10 +290,10 @@ const connectionState = useStream(
 const io = useStream(SIOSocket$, null, setSIOSocket)
 const log = useStream(SIOLog$, [], setSIOLog)
 const authTypeOptions = ref<any>(null)
-const versionOptions = ref<any>(null)
+const versionOptions = ref<any | null>(null)
 
 const isUrlValid = ref(true)
-const authType = ref("None")
+const authType = ref<"None" | "Bearer">("None")
 const bearerToken = ref("")
 const authActive = ref(true)
 
@@ -294,22 +301,26 @@ const urlValid = computed(() => isUrlValid.value)
 
 let worker: Worker
 
-const workerResponseHandler = ({ data }) => {
+const workerResponseHandler = ({
+  data,
+}: {
+  data: { url: string; result: boolean }
+}) => {
   if (data.url === url.value) isUrlValid.value = data.result
 }
 
-if (process.browser) {
+onMounted(() => {
   worker = nuxt.value.$worker.createRejexWorker()
   worker.addEventListener("message", workerResponseHandler)
-}
+})
 
 watch(url, (newUrl) => {
   if (newUrl) debouncer()
 })
 
 watch(connectionState, (connected) => {
-  if (connected) versionOptions.tippy().disable()
-  else versionOptions.tippy().enable()
+  if (connected) versionOptions.value.tippy().disable()
+  else versionOptions.value.tippy().enable()
 })
 
 onUnmounted(() => {
@@ -322,21 +333,22 @@ const debouncer = debounce(function () {
 
 const toggleConnection = () => {
   // If it is connecting:
-  if (!connectionState.value) return connect()
+  if (!connectionState.value) {
+    log.value = [
+      {
+        payload: `${t("state.connecting_to", { name: url.value })}`,
+        source: "info",
+        color: "var(--accent-color)",
+        ts: "",
+      },
+    ]
+    return connect()
+  }
   // Otherwise, it's disconnecting.
   else return disconnect()
 }
 const connect = () => {
   connectingState.value = true
-  log.value = [
-    {
-      payload: `${t("state.connecting_to", { name: url.value })}`,
-      source: "info",
-      color: "var(--accent-color)",
-      ts: "",
-    },
-  ]
-
   try {
     if (!path.value) {
       path.value = "/socket.io"
@@ -368,7 +380,7 @@ const connect = () => {
       ]
       toast.success(`${t("state.connected")}`)
     })
-    io.value.on("*", ({ data }) => {
+    io.value.on("*", ({ data }: { data: string[] }) => {
       const [eventName, message] = data
       addSIOLogLine({
         payload: `[${eventName}] ${message ? JSON.stringify(message) : ""}`,
@@ -446,8 +458,8 @@ const sendMessage = (event: { message: string; eventName: string }) => {
     })
   }
 }
-const onSelectVersion = (version: string) => {
+const onSelectVersion = (version: ClientVersion) => {
   clientVersion.value = version
-  versionOptions.tippy().hide()
+  versionOptions.value.tippy().hide()
 }
 </script>
