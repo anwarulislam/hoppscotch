@@ -14,7 +14,10 @@
             spellcheck="false"
             :class="{ error: !urlValid }"
             :placeholder="`${t('websocket.url')}`"
-            :disabled="connectionState"
+            :disabled="
+              connectionState === 'CONNECTED' ||
+              connectionState === 'CONNECTING'
+            "
             @keyup.enter="urlValid ? toggleConnection() : null"
           />
           <ButtonPrimary
@@ -23,9 +26,11 @@
             class="w-32"
             name="connect"
             :label="
-              !connectionState ? t('action.connect') : t('action.disconnect')
+              connectionState === 'DISCONNECTED'
+                ? t('action.connect')
+                : t('action.disconnect')
             "
-            :loading="connectingState"
+            :loading="connectionState === 'CONNECTING'"
             @click.native="toggleConnection"
           />
         </div>
@@ -182,39 +187,36 @@ import {
   updateWSProtocol,
   deleteAllWSProtocols,
   setWSConnectionState,
-  setWSConnectingState,
   addWSLogLine,
   WSLog$,
   setWSLog,
+  HoppWSProtocol,
 } from "~/newstore/WebSocketSession"
 import {
   useI18n,
   useStream,
   useToast,
   useNuxt,
+  useStreamSubscriber,
 } from "~/helpers/utils/composables"
-import { WebSocketConnection, WSEvent } from "~/helpers/realtime/WSConnection"
+import { WSConnection, WSEvent } from "~/helpers/realtime/WSConnection"
 
 const nuxt = useNuxt()
 const t = useI18n()
 const toast = useToast()
 
-const selectedTab = ref("communication")
+const selectedTab = ref<"communication" | "protocols">("communication")
 const url = useStream(WSEndpoint$, "", setWSEndpoint)
 const protocols = useStream(WSProtocols$, [], setWSProtocols)
 
-const WSConnection = new WebSocketConnection()
+const socket = new WSConnection()
 
 const connectionState = useStream(
-  WSConnection.connection$,
-  false,
+  socket.connectionState$,
+  "DISCONNECTED",
   setWSConnectionState
 )
-const connectingState = useStream(
-  WSConnection.connecting$,
-  false,
-  setWSConnectingState
-)
+
 const log = useStream(WSLog$, [], setWSLog)
 // DATA
 const isUrlValid = ref(true)
@@ -244,13 +246,14 @@ const workerResponseHandler = ({
 }) => {
   if (data.url === url.value) isUrlValid.value = data.result
 }
-if (process.browser) {
-  worker = nuxt.value.$worker.createRejexWorker()
-  worker.addEventListener("message", workerResponseHandler)
-}
 
 onMounted(() => {
-  WSConnection.events$.subscribe((events: WSEvent[]) => {
+  worker = nuxt.value.$worker.createRejexWorker()
+  worker.addEventListener("message", workerResponseHandler)
+
+  const { subscribeToStream } = useStreamSubscriber()
+
+  subscribeToStream(socket.events$, (events: WSEvent[]) => {
     const event = events[events.length - 1]
     switch (event?.type) {
       case "CONNECTING":
@@ -328,7 +331,7 @@ const debouncer = debounce(function () {
 
 const toggleConnection = () => {
   // If it is connecting:
-  if (!connectionState.value) {
+  if (connectionState.value === "DISCONNECTED") {
     log.value = [
       {
         payload: `${t("state.connecting_to", { name: url.value })}`,
@@ -337,14 +340,14 @@ const toggleConnection = () => {
         ts: "",
       },
     ]
-    return WSConnection.connect(url.value, activeProtocols.value)
+    return socket.connect(url.value, activeProtocols.value)
   }
   // Otherwise, it's disconnecting.
-  else return WSConnection.disconnect()
+  else return socket.disconnect()
 }
 
 const sendMessage = (event: { message: string; eventName: string }) => {
-  WSConnection.sendMessage(event)
+  socket.sendMessage(event)
 }
 const addProtocol = () => {
   addWSProtocol({ value: "", active: true })
@@ -363,7 +366,7 @@ const deleteProtocol = (index: number) => {
     },
   })
 }
-const updateProtocol = (index: number, updated: any) => {
+const updateProtocol = (index: number, updated: HoppWSProtocol) => {
   updateWSProtocol(index, updated)
 }
 </script>
