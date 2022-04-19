@@ -23,7 +23,10 @@
                       class="flex px-4 py-2 font-semibold border rounded-l cursor-pointer bg-primaryLight border-divider text-secondaryDark w-26"
                       :value="`Client ${clientVersion}`"
                       readonly
-                      :disabled="connectionState"
+                      :disabled="
+                        connectionState === 'CONNECTED' ||
+                        connectionState === 'CONNECTING'
+                      "
                     />
                   </span>
                 </template>
@@ -46,7 +49,10 @@
               :class="{ error: !urlValid }"
               class="flex flex-1 w-full px-4 py-2 border bg-primaryLight border-divider text-secondaryDark"
               :placeholder="`${t('socketio.url')}`"
-              :disabled="connectionState"
+              :disabled="
+                connectionState === 'CONNECTED' ||
+                connectionState === 'CONNECTING'
+              "
               @keyup.enter="urlValid ? toggleConnection() : null"
             />
             <input
@@ -54,7 +60,10 @@
               v-model="path"
               class="flex flex-1 w-full px-4 py-2 border rounded-r bg-primaryLight border-divider text-secondaryDark"
               spellcheck="false"
-              :disabled="connectionState"
+              :disabled="
+                connectionState === 'CONNECTED' ||
+                connectionState === 'CONNECTING'
+              "
               @keyup.enter="urlValid ? toggleConnection() : null"
             />
           </div>
@@ -64,9 +73,11 @@
             name="connect"
             class="w-32"
             :label="
-              !connectionState ? t('action.connect') : t('action.disconnect')
+              connectionState === 'DISCONNECTED'
+                ? t('action.connect')
+                : t('action.disconnect')
             "
-            :loading="connectingState"
+            :loading="connectionState === 'CONNECTING'"
             @click.native="toggleConnection"
           />
         </div>
@@ -224,43 +235,39 @@
 
 <script setup lang="ts">
 import {
-  ref,
-  onUnmounted,
   computed,
-  watch,
   onMounted,
+  onUnmounted,
+  ref,
+  watch,
 } from "@nuxtjs/composition-api"
 // All Socket.IO client version imports
-import ClientV2 from "socket.io-client-v2"
-import { io as ClientV3 } from "socket.io-client-v3"
-import { io as ClientV4 } from "socket.io-client-v4"
-import wildcard from "socketio-wildcard"
 import debounce from "lodash/debounce"
-import { logHoppRequestRunToAnalytics } from "~/helpers/fb/analytics"
 import {
-  SIOEndpoint$,
-  setSIOEndpoint,
-  SIOVersion$,
-  setSIOVersion,
-  SIOPath$,
-  setSIOPath,
-  SIOConnectionState$,
-  SIOConnectingState$,
-  setSIOConnectionState,
-  setSIOConnectingState,
-  SIOSocket$,
-  setSIOSocket,
-  SIOLog$,
-  setSIOLog,
+  SIOConnection,
+  SIOEvent,
+  socketIoClients,
+} from "~/helpers/realtime/SIOConnection"
+import {
+  useI18n,
+  useNuxt,
+  useStream,
+  useStreamSubscriber,
+  useToast,
+} from "~/helpers/utils/composables"
+import {
   addSIOLogLine,
   ClientVersion,
+  setSIOConnectionState,
+  setSIOEndpoint,
+  setSIOLog,
+  setSIOPath,
+  setSIOVersion,
+  SIOEndpoint$,
+  SIOLog$,
+  SIOPath$,
+  SIOVersion$,
 } from "~/newstore/SocketIOSession"
-import {
-  useStream,
-  useI18n,
-  useToast,
-  useNuxt,
-} from "~/helpers/utils/composables"
 
 const t = useI18n()
 const toast = useToast()
@@ -268,26 +275,15 @@ const nuxt = useNuxt()
 
 const selectedTab = ref("communication")
 
-const socketIoClients = {
-  v4: ClientV4,
-  v3: ClientV3,
-  v2: ClientV2,
-}
-
 const url = useStream(SIOEndpoint$, "", setSIOEndpoint)
 const clientVersion = useStream(SIOVersion$, "v4", setSIOVersion)
 const path = useStream(SIOPath$, "", setSIOPath)
-const connectingState = useStream(
-  SIOConnectingState$,
-  false,
-  setSIOConnectingState
-)
+const socket = new SIOConnection()
 const connectionState = useStream(
-  SIOConnectionState$,
-  false,
+  socket.connectionState$,
+  "DISCONNECTED",
   setSIOConnectionState
 )
-const io = useStream(SIOSocket$, null, setSIOSocket)
 const log = useStream(SIOLog$, [], setSIOLog)
 const authTypeOptions = ref<any>(null)
 const versionOptions = ref<any | null>(null)
@@ -312,6 +308,73 @@ const workerResponseHandler = ({
 onMounted(() => {
   worker = nuxt.value.$worker.createRejexWorker()
   worker.addEventListener("message", workerResponseHandler)
+
+  const { subscribeToStream } = useStreamSubscriber()
+
+  subscribeToStream(socket.events$, (events: SIOEvent[]) => {
+    const event = events[events.length - 1]
+    switch (event?.type) {
+      case "CONNECTING":
+        log.value = [
+          {
+            payload: `${t("state.connecting_to", { name: url.value })}`,
+            source: "info",
+            color: "var(--accent-color)",
+            ts: "",
+          },
+        ]
+        break
+
+      case "CONNECTED":
+        log.value = [
+          {
+            payload: `${t("state.connected_to", { name: url.value })}`,
+            source: "info",
+            color: "var(--accent-color)",
+            ts: new Date(event.time).toLocaleTimeString(),
+          },
+        ]
+        toast.success(`${t("state.connected")}`)
+        break
+
+      case "MESSAGE_SENT":
+        addSIOLogLine({
+          payload: event.message,
+          source: "client",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "MESSAGE_RECEIVED":
+        addSIOLogLine({
+          payload: event.message,
+          source: "server",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "ERROR":
+        addSIOLogLine({
+          payload:
+            event.error ||
+            (t("state.disconnected_from", { name: url.value }) as string),
+          source: "info",
+          color: "#ff5555",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "DISCONNECTED":
+        addSIOLogLine({
+          payload: t("state.disconnected_from", { name: url.value }) as string,
+          source: "info",
+          color: "#ff5555",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        toast.error(`${t("state.disconnected")}`)
+        break
+    }
+  })
 })
 
 watch(url, (newUrl) => {
@@ -333,130 +396,20 @@ const debouncer = debounce(function () {
 
 const toggleConnection = () => {
   // If it is connecting:
-  if (!connectionState.value) {
-    log.value = [
-      {
-        payload: `${t("state.connecting_to", { name: url.value })}`,
-        source: "info",
-        color: "var(--accent-color)",
-        ts: "",
-      },
-    ]
-    return connect()
+  if (connectionState.value === "DISCONNECTED") {
+    return socket.connect({
+      url: url.value,
+      path: path.value,
+      clientVersion: clientVersion.value,
+      authType: authType.value,
+      bearerToken: authType.value === "Bearer" ? bearerToken.value : "",
+    })
   }
   // Otherwise, it's disconnecting.
-  else return disconnect()
-}
-const connect = () => {
-  connectingState.value = true
-  try {
-    if (!path.value) {
-      path.value = "/socket.io"
-    }
-    const Client = socketIoClients[clientVersion.value]
-    if (authActive.value && authType.value === "Bearer") {
-      io.value = new Client(url.value, {
-        path: path.value,
-        auth: {
-          token: bearerToken.value,
-        },
-      })
-    } else {
-      io.value = new Client(url.value, { path: path.value })
-    }
-
-    // Add ability to listen to all events
-    wildcard(Client.Manager)(io.value)
-    io.value.on("connect", () => {
-      connectingState.value = false
-      connectionState.value = true
-      log.value = [
-        {
-          payload: `${t("state.connected_to", { name: url.value })}`,
-          source: "info",
-          color: "var(--accent-color)",
-          ts: new Date().toLocaleTimeString(),
-        },
-      ]
-      toast.success(`${t("state.connected")}`)
-    })
-    io.value.on("*", ({ data }: { data: string[] }) => {
-      const [eventName, message] = data
-      addSIOLogLine({
-        payload: `[${eventName}] ${message ? JSON.stringify(message) : ""}`,
-        source: "server",
-        ts: new Date().toLocaleTimeString(),
-      })
-    })
-    io.value.on("connect_error", (error: any) => {
-      handleError(error)
-    })
-    io.value.on("reconnect_error", (error: any) => {
-      handleError(error)
-    })
-    io.value.on("error", (error: any) => {
-      handleError(error)
-    })
-    io.value.on("disconnect", () => {
-      connectingState.value = false
-      connectionState.value = false
-      addSIOLogLine({
-        payload: `${t("state.disconnected_from", { name: url.value })}`,
-        source: "info",
-        color: "#ff5555",
-        ts: new Date().toLocaleTimeString(),
-      })
-      toast.error(`${t("state.disconnected")}`)
-    })
-  } catch (e) {
-    handleError(e)
-    toast.error(`${t("error.something_went_wrong")}`)
-  }
-
-  logHoppRequestRunToAnalytics({
-    platform: "socketio",
-  })
-}
-const disconnect = () => {
-  io.value.close()
-}
-const handleError = (error: any) => {
-  disconnect()
-  connectingState.value = false
-  connectionState.value = false
-  addSIOLogLine({
-    payload: `${t("error.something_went_wrong")}`,
-    source: "info",
-    color: "#ff5555",
-    ts: new Date().toLocaleTimeString(),
-  })
-  if (error !== null)
-    addSIOLogLine({
-      payload: error,
-      source: "info",
-      color: "#ff5555",
-      ts: new Date().toLocaleTimeString(),
-    })
+  socket.disconnect()
 }
 const sendMessage = (event: { message: string; eventName: string }) => {
-  if (!connectionState.value) return
-  const { message, eventName } = event
-  if (io.value) {
-    io.value.emit(eventName, message, (data: object) => {
-      // receive response from server
-      addSIOLogLine({
-        payload: `[${eventName}] ${JSON.stringify(data)}`,
-        source: "server",
-        ts: new Date().toLocaleTimeString(),
-      })
-    })
-
-    addSIOLogLine({
-      payload: `[${eventName}] ${JSON.stringify(message)}`,
-      source: "client",
-      ts: new Date().toLocaleTimeString(),
-    })
-  }
+  socket.sendMessage(event)
 }
 const onSelectVersion = (version: ClientVersion) => {
   clientVersion.value = version
