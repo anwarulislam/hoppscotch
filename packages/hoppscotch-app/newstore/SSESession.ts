@@ -56,7 +56,7 @@ const dispatchers = defineDispatchers({
       },
     }
   },
-  setSocket(_: HoppSSESession, { socket }: { socket: EventSource }) {
+  setSocket(_: HoppSSESession, { socket }: { socket: EventSource | null }) {
     return {
       socket,
     }
@@ -112,7 +112,7 @@ export function setSSEEventType(newType: string) {
   })
 }
 
-export function setSSESocket(socket: EventSource) {
+export function setSSESocket(socket: EventSource | null) {
   SSESessionStore.dispatch({
     dispatcher: "setSocket",
     payload: {

@@ -53,7 +53,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from "@nuxtjs/composition-api"
+import {
+  ref,
+  computed,
+  watch,
+  onUnmounted,
+  onMounted,
+} from "@nuxtjs/composition-api"
 import "splitpanes/dist/splitpanes.css"
 import debounce from "lodash/debounce"
 import { logHoppRequestRunToAnalytics } from "~/helpers/fb/analytics"
@@ -119,10 +125,10 @@ const workerResponseHandler = ({
   if (data.url === server.value) isUrlValid.value = data.result
 }
 
-if (process.browser) {
+onMounted(() => {
   worker = nuxt.value.$worker.createRejexWorker()
   worker.addEventListener("message", workerResponseHandler)
-}
+})
 
 // METHODS
 
@@ -215,8 +221,7 @@ const handleSSEError = (error: any) => {
     })
 }
 const stop = () => {
-  sse.value.close()
-  // sse.value.onclose()
+  sse.value?.close()
 }
 
 onUnmounted(() => {
