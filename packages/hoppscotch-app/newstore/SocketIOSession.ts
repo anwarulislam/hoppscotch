@@ -7,6 +7,7 @@ import {
   HoppRealtimeLog,
   HoppRealtimeLogLine,
 } from "~/helpers/types/HoppRealtimeLog"
+import { ConnectionState } from "~/helpers/realtime/SIOConnection"
 
 type SocketIO = SocketV2 | SocketV3 | SocketV4
 
@@ -20,8 +21,7 @@ type HoppSIORequest = {
 
 type HoppSIOSession = {
   request: HoppSIORequest
-  connectingState: boolean
-  connectionState: boolean
+  connectionState: ConnectionState
   log: HoppRealtimeLog
   socket: SocketIO | null
 }
@@ -34,8 +34,7 @@ const defaultSIORequest: HoppSIORequest = {
 
 const defaultSIOSession: HoppSIOSession = {
   request: defaultSIORequest,
-  connectionState: false,
-  connectingState: false,
+  connectionState: "DISCONNECTED",
   socket: null,
   log: [],
 }
@@ -81,14 +80,9 @@ const dispatchers = defineDispatchers({
       socket,
     }
   },
-  setConnectionState(_: HoppSIOSession, { state }: { state: boolean }) {
+  setConnectionState(_: HoppSIOSession, { state }: { state: ConnectionState }) {
     return {
       connectionState: state,
-    }
-  },
-  setConnectingState(_: HoppSIOSession, { state }: { state: boolean }) {
-    return {
-      connectingState: state,
     }
   },
   setLog(_: HoppSIOSession, { log }: { log: HoppRealtimeLog }) {
@@ -150,7 +144,7 @@ export function setSIOSocket(socket: SocketIO) {
   })
 }
 
-export function setSIOConnectionState(state: boolean) {
+export function setSIOConnectionState(state: ConnectionState) {
   SIOSessionStore.dispatch({
     dispatcher: "setConnectionState",
     payload: {
@@ -158,15 +152,6 @@ export function setSIOConnectionState(state: boolean) {
     },
   })
 }
-export function setSIOConnectingState(state: boolean) {
-  SIOSessionStore.dispatch({
-    dispatcher: "setConnectingState",
-    payload: {
-      state,
-    },
-  })
-}
-
 export function setSIOLog(log: HoppRealtimeLog) {
   SIOSessionStore.dispatch({
     dispatcher: "setLog",
@@ -202,11 +187,6 @@ export const SIOVersion$ = SIOSessionStore.subject$.pipe(
 
 export const SIOPath$ = SIOSessionStore.subject$.pipe(
   pluck("request", "path"),
-  distinctUntilChanged()
-)
-
-export const SIOConnectingState$ = SIOSessionStore.subject$.pipe(
-  pluck("connectingState"),
   distinctUntilChanged()
 )
 
