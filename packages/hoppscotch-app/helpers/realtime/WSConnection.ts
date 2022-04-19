@@ -30,6 +30,12 @@ export class WSConnection {
       this.connectionState$.next("CONNECTING")
       this.socket = new WebSocket(url, protocols)
 
+      this.addEvent({
+        time: Date.now(),
+        type: "CONNECTING",
+        manual: false,
+      })
+
       this.socket.onopen = () => {
         this.connectionState$.next("CONNECTED")
         this.addEvent({
