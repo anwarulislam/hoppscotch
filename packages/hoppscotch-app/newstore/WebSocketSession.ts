@@ -4,7 +4,7 @@ import {
   HoppRealtimeLog,
   HoppRealtimeLogLine,
 } from "~/helpers/types/HoppRealtimeLog"
-import { ConnectionState } from "~/helpers/realtime/WSConnection"
+import { ConnectionState, WSConnection } from "~/helpers/realtime/WSConnection"
 
 export type HoppWSProtocol = {
   value: string
@@ -20,7 +20,7 @@ export type HoppWSSession = {
   request: HoppWSRequest
   connectionState: ConnectionState
   log: HoppRealtimeLog
-  socket: WebSocket | null
+  socket: WSConnection
 }
 
 const defaultWSRequest: HoppWSRequest = {
@@ -31,7 +31,7 @@ const defaultWSRequest: HoppWSRequest = {
 const defaultWSSession: HoppWSSession = {
   request: defaultWSRequest,
   connectionState: "DISCONNECTED",
-  socket: null,
+  socket: new WSConnection(),
   log: [],
 }
 
@@ -100,7 +100,7 @@ const dispatchers = defineDispatchers({
       },
     }
   },
-  setSocket(_: HoppWSSession, { socket }: { socket: WebSocket }) {
+  setSocket(_: HoppWSSession, { socket }: { socket: WSConnection }) {
     return {
       socket,
     }
@@ -189,7 +189,7 @@ export function updateWSProtocol(
   })
 }
 
-export function setWSSocket(socket: WebSocket | null) {
+export function setWSSocket(socket: WSConnection) {
   WSSessionStore.dispatch({
     dispatcher: "setSocket",
     payload: {

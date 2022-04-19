@@ -191,6 +191,8 @@ import {
   WSLog$,
   setWSLog,
   HoppWSProtocol,
+  setWSSocket,
+  WSSocket$,
 } from "~/newstore/WebSocketSession"
 import {
   useI18n,
@@ -209,10 +211,10 @@ const selectedTab = ref<"communication" | "protocols">("communication")
 const url = useStream(WSEndpoint$, "", setWSEndpoint)
 const protocols = useStream(WSProtocols$, [], setWSProtocols)
 
-const socket = new WSConnection()
+const socket = useStream(WSSocket$, new WSConnection(), setWSSocket)
 
 const connectionState = useStream(
-  socket.connectionState$,
+  socket.value.connectionState$,
   "DISCONNECTED",
   setWSConnectionState
 )
@@ -253,7 +255,7 @@ onMounted(() => {
 
   const { subscribeToStream } = useStreamSubscriber()
 
-  subscribeToStream(socket.events$, (events: WSEvent[]) => {
+  subscribeToStream(socket.value.events$, (events: WSEvent[]) => {
     const event = events[events.length - 1]
     switch (event?.type) {
       case "CONNECTING":
@@ -332,14 +334,14 @@ const debouncer = debounce(function () {
 const toggleConnection = () => {
   // If it is connecting:
   if (connectionState.value === "DISCONNECTED") {
-    return socket.connect(url.value, activeProtocols.value)
+    return socket.value.connect(url.value, activeProtocols.value)
   }
   // Otherwise, it's disconnecting.
-  socket.disconnect()
+  socket.value.disconnect()
 }
 
 const sendMessage = (event: { message: string; eventName: string }) => {
-  socket.sendMessage(event)
+  socket.value.sendMessage(event)
 }
 const addProtocol = () => {
   addWSProtocol({ value: "", active: true })
