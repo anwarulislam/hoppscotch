@@ -100,7 +100,7 @@ export function setMQTTEndpoint(newEndpoint: string) {
   })
 }
 
-export function setMQTTSocket(socket: MQTTClient) {
+export function setMQTTSocket(socket: MQTTClient | null) {
   MQTTSessionStore.dispatch({
     dispatcher: "setSocket",
     payload: {

@@ -123,7 +123,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from "@nuxtjs/composition-api"
+import {
+  ref,
+  computed,
+  watch,
+  onUnmounted,
+  onMounted,
+} from "@nuxtjs/composition-api"
 import Paho, { ConnectionOptions } from "paho-mqtt"
 import debounce from "lodash/debounce"
 import { logHoppRequestRunToAnalytics } from "~/helpers/fb/analytics"
@@ -169,7 +175,7 @@ const subscriptionState = useStream(
   false,
   setMQTTSubscriptionState
 )
-const log = useStream(MQTTLog$, null, setMQTTLog)
+const log = useStream(MQTTLog$, [], setMQTTLog)
 const client = useStream(MQTTSocket$, null, setMQTTSocket)
 
 const isUrlValid = ref(true)
@@ -198,10 +204,10 @@ const workerResponseHandler = ({
   if (data.url === url.value) isUrlValid.value = data.result
 }
 
-if (process.browser) {
+onMounted(() => {
   worker = nuxt.value.$worker.createRejexWorker()
   worker.addEventListener("message", workerResponseHandler)
-}
+})
 
 const debouncer = debounce(function () {
   worker.postMessage({ type: "ws", url: url.value })
@@ -294,7 +300,7 @@ const toggleConnection = () => {
 }
 const disconnect = () => {
   manualDisconnect.value = true
-  client.value.disconnect()
+  client.value?.disconnect()
   addMQTTLogLine({
     payload: t("state.disconnected_from", { name: url.value }) as string,
     source: "info",
@@ -316,7 +322,7 @@ const onConnectionLost = () => {
 const publish = () => {
   try {
     // it was publish
-    client.value.send(pubTopic.value, msg.value, 0, false)
+    client.value?.send(pubTopic.value, msg.value, 0, false)
     addMQTTLogLine({
       payload: `Published message: ${msg.value} to topic: ${pubTopic.value}`,
       ts: new Date().toLocaleTimeString(),
@@ -343,7 +349,7 @@ const toggleSubscription = () => {
 }
 const subscribe = () => {
   try {
-    client.value.subscribe(subTopic.value, {
+    client.value?.subscribe(subTopic.value, {
       onSuccess: usubSuccess,
       onFailure: usubFailure,
     })
@@ -382,7 +388,7 @@ const usubFailure = () => {
   })
 }
 const unsubscribe = () => {
-  client.value.unsubscribe(subTopic.value, {
+  client.value?.unsubscribe(subTopic.value, {
     onSuccess: usubSuccess,
     onFailure: usubFailure,
   })
