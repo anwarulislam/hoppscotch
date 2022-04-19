@@ -165,18 +165,6 @@ const start = () => {
         toast.success(t("state.connected") as string)
       }
       sse.value.onerror = handleSSEError
-      sse.value.onclose = () => {
-        connectionSSEState.value = false
-        addSSELogLine({
-          payload: t("state.disconnected_from", {
-            name: server.value,
-          }) as string,
-          source: "info",
-          color: "#ff5555",
-          ts: new Date().toLocaleTimeString(),
-        })
-        toast.error(t("state.disconnected") as string)
-      }
       sse.value.addEventListener(eventType.value, ({ data }) => {
         addSSELogLine({
           payload: data,
