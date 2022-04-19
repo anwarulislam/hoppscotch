@@ -332,18 +332,10 @@ const debouncer = debounce(function () {
 const toggleConnection = () => {
   // If it is connecting:
   if (connectionState.value === "DISCONNECTED") {
-    log.value = [
-      {
-        payload: `${t("state.connecting_to", { name: url.value })}`,
-        source: "info",
-        color: "var(--accent-color)",
-        ts: "",
-      },
-    ]
     return socket.connect(url.value, activeProtocols.value)
   }
   // Otherwise, it's disconnecting.
-  else return socket.disconnect()
+  socket.disconnect()
 }
 
 const sendMessage = (event: { message: string; eventName: string }) => {

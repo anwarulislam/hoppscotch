@@ -89,8 +89,6 @@ export class WSConnection {
   }
 
   disconnect() {
-    if (this.socket) {
-      this.socket.close()
-    }
+    this.socket?.close()
   }
 }
