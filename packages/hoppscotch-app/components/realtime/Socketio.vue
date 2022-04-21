@@ -32,7 +32,7 @@
                 </template>
                 <div class="flex flex-col" role="menu">
                   <SmartItem
-                    v-for="(_, version) in socketIoClients"
+                    v-for="version in ['v4', 'v3', 'v2']"
                     :key="`client-${version}`"
                     :label="`Client ${version}`"
                     @click.native="onSelectVersion(version)"
@@ -243,11 +243,7 @@ import {
 } from "@nuxtjs/composition-api"
 // All Socket.IO client version imports
 import debounce from "lodash/debounce"
-import {
-  SIOConnection,
-  SIOEvent,
-  socketIoClients,
-} from "~/helpers/realtime/SIOConnection"
+import { SIOConnection, SIOEvent } from "~/helpers/realtime/SIOConnection"
 import {
   useI18n,
   useNuxt,

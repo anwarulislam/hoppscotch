@@ -6,7 +6,7 @@ import wildcard from "socketio-wildcard"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
 import { ClientVersion } from "~/newstore/SocketIOSession"
 
-export const socketIoClients = {
+const socketIoClients = {
   v4: ClientV4,
   v3: ClientV3,
   v2: ClientV2,
