@@ -2,8 +2,8 @@ import { BehaviorSubject } from "rxjs"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
 
 export type WSEvent = { time: number } & (
-  | { type: "CONNECTING"; manual: boolean }
-  | { type: "CONNECTED"; manual: boolean }
+  | { type: "CONNECTING" }
+  | { type: "CONNECTED" }
   | { type: "MESSAGE_SENT"; message: string }
   | { type: "MESSAGE_RECEIVED"; message: string }
   | { type: "DISCONNECTED"; manual: boolean }
@@ -33,7 +33,6 @@ export class WSConnection {
       this.addEvent({
         time: Date.now(),
         type: "CONNECTING",
-        manual: false,
       })
 
       this.socket.onopen = () => {
@@ -41,7 +40,6 @@ export class WSConnection {
         this.addEvent({
           type: "CONNECTED",
           time: Date.now(),
-          manual: true,
         })
       }
 
