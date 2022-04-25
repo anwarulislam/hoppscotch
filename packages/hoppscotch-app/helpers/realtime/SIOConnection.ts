@@ -1,15 +1,13 @@
 import { BehaviorSubject } from "rxjs"
-import ClientV2 from "socket.io-client-v2"
-import { io as ClientV3 } from "socket.io-client-v3"
-import { io as ClientV4 } from "socket.io-client-v4"
-import wildcard from "socketio-wildcard"
+// import wildcard from "socketio-wildcard"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
+import { SIOClientV2, SIOClientV3, SIOClientV4 } from "./SIOClients"
 import { ClientVersion } from "~/newstore/SocketIOSession"
 
-const socketIoClients = {
-  v4: ClientV4,
-  v3: ClientV3,
-  v2: ClientV2,
+const SocketClients = {
+  v2: SIOClientV2,
+  v3: SIOClientV3,
+  v4: SIOClientV4,
 }
 
 export type ConnectionOption = {
@@ -22,8 +20,8 @@ export type ConnectionOption = {
 }
 
 export type SIOEvent = { time: number } & (
-  | { type: "CONNECTING"; manual: boolean }
-  | { type: "CONNECTED"; manual: boolean }
+  | { type: "CONNECTING" }
+  | { type: "CONNECTED" }
   | { type: "MESSAGE_SENT"; message: string }
   | { type: "MESSAGE_RECEIVED"; message: string }
   | { type: "DISCONNECTED"; manual: boolean }
@@ -35,7 +33,7 @@ export type ConnectionState = "CONNECTING" | "CONNECTED" | "DISCONNECTED"
 export class SIOConnection {
   connectionState$: BehaviorSubject<ConnectionState>
   events$: BehaviorSubject<SIOEvent[]>
-  io: any | undefined
+  socket: SIOClientV4 | SIOClientV3 | SIOClientV2 | undefined
   constructor() {
     this.connectionState$ = new BehaviorSubject<ConnectionState>("DISCONNECTED")
     this.events$ = new BehaviorSubject<SIOEvent[]>([])
@@ -57,36 +55,34 @@ export class SIOConnection {
     this.addEvent({
       time: Date.now(),
       type: "CONNECTING",
-      manual: false,
     })
     try {
       path = path || "/socket.io"
       // using any as temporary workaround for
-      const Client: any = socketIoClients[clientVersion]
+      this.socket = new SocketClients[clientVersion]()
+
       if (authActive && authType === "Bearer") {
-        this.io = new Client(url, {
+        this.socket.connect(url, {
           path,
           auth: {
             token: bearerToken,
           },
         })
       } else {
-        this.io = new Client(url, { path })
+        this.socket.connect(url)
       }
 
-      // Add ability to listen to all events
-      wildcard(Client.Manager)(this.io)
+      // wildcard(this.socket.Manager)(this.socket.client)
 
-      this.io.on("connect", () => {
+      this.socket.on("connect", () => {
         this.connectionState$.next("CONNECTED")
         this.addEvent({
           type: "CONNECTED",
           time: Date.now(),
-          manual: true,
         })
       })
 
-      this.io.on("*", ({ data }: { data: string[] }) => {
+      this.socket.on("*", ({ data }: { data: string[] }) => {
         const [eventName, message] = data
         this.addEvent({
           message: `[${eventName}] ${message ? JSON.stringify(message) : ""}`,
@@ -95,19 +91,19 @@ export class SIOConnection {
         })
       })
 
-      this.io.on("connect_error", (error: any) => {
+      this.socket.on("connect_error", (error: any) => {
         this.handleError(error)
       })
 
-      this.io.on("reconnect_error", (error: any) => {
+      this.socket.on("reconnect_error", (error: any) => {
         this.handleError(error)
       })
 
-      this.io.on("error", (error: any) => {
+      this.socket.on("error", (error: any) => {
         this.handleError(error)
       })
 
-      this.io.on("disconnect", () => {
+      this.socket.on("disconnect", () => {
         this.connectionState$.next("DISCONNECTED")
         this.addEvent({
           type: "DISCONNECTED",
@@ -137,7 +133,7 @@ export class SIOConnection {
     if (this.connectionState$.value === "DISCONNECTED") return
     const { message, eventName } = event
 
-    this.io?.emit(eventName, message, (data: object) => {
+    this.socket?.emit(eventName, message, (data: object) => {
       // receive response from server
       this.addEvent({
         time: Date.now(),
@@ -154,7 +150,7 @@ export class SIOConnection {
   }
 
   disconnect() {
-    this.io?.close()
+    this.socket?.close()
     this.connectionState$.next("DISCONNECTED")
   }
 }
