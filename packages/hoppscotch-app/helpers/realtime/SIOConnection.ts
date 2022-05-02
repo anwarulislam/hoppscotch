@@ -1,7 +1,7 @@
 import { BehaviorSubject } from "rxjs"
 // import wildcard from "socketio-wildcard"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
-import { SIOClientV2, SIOClientV3, SIOClientV4 } from "./SIOClients"
+import { SIOClientV2, SIOClientV3, SIOClientV4, SIOClient } from "./SIOClients"
 import { SIOClientVersion } from "~/newstore/SocketIOSession"
 
 export const SocketClients = {
@@ -33,7 +33,7 @@ export type ConnectionState = "CONNECTING" | "CONNECTED" | "DISCONNECTED"
 export class SIOConnection {
   connectionState$: BehaviorSubject<ConnectionState>
   events$: BehaviorSubject<SIOEvent[]>
-  socket: SIOClientV4 | SIOClientV3 | SIOClientV2 | undefined
+  socket: SIOClient | undefined
   constructor() {
     this.connectionState$ = new BehaviorSubject<ConnectionState>("DISCONNECTED")
     this.events$ = new BehaviorSubject<SIOEvent[]>([])
@@ -57,8 +57,6 @@ export class SIOConnection {
       type: "CONNECTING",
     })
     try {
-      path = path || "/socket.io"
-      // using any as temporary workaround for
       this.socket = new SocketClients[clientVersion]()
 
       if (authActive && authType === "Bearer") {

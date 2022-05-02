@@ -16,18 +16,16 @@ type PossibleEvent =
   | "error"
   | "disconnect"
   | "*"
-  | string
 
-interface SIOClient {
-  client: SocketV3 | SocketV4 | undefined
-  connect(url: string, opts?: Options): any
+export interface SIOClient {
+  connect(url: string, opts?: Options): void
   on(event: PossibleEvent, cb: (data: any) => void): void
   emit(event: string, data: any, cb: (data: any) => void): void
   close(): void
 }
 
 export class SIOClientV4 implements SIOClient {
-  client: SocketV4 | undefined
+  private client: SocketV4 | undefined
   connect(url: string, opts?: Options) {
     this.client = ClientV4(url, opts)
   }
@@ -46,7 +44,7 @@ export class SIOClientV4 implements SIOClient {
 }
 
 export class SIOClientV3 implements SIOClient {
-  client: SocketV3 | undefined
+  private client: SocketV3 | undefined
   connect(url: string, opts?: Options) {
     this.client = ClientV3(url, opts)
   }
@@ -65,7 +63,7 @@ export class SIOClientV3 implements SIOClient {
 }
 
 export class SIOClientV2 implements SIOClient {
-  client: any | undefined
+  private client: any | undefined
   connect(url: string, opts?: Options) {
     this.client = new (ClientV2 as any)(url, opts)
   }

@@ -391,7 +391,7 @@ const toggleConnection = () => {
   if (connectionState.value === "DISCONNECTED") {
     return socket.connect({
       url: url.value,
-      path: path.value,
+      path: path.value || "/socket.io",
       clientVersion: clientVersion.value,
       authType: authType.value,
       bearerToken: authType.value === "Bearer" ? bearerToken.value : "",
