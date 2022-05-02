@@ -32,7 +32,7 @@
                 </template>
                 <div class="flex flex-col" role="menu">
                   <SmartItem
-                    v-for="version in ['v4', 'v3', 'v2']"
+                    v-for="version in SIOVersions"
                     :key="`client-${version}`"
                     :label="`Client ${version}`"
                     @click.native="onSelectVersion(version)"
@@ -236,7 +236,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from "@nuxtjs/composition-api"
 import debounce from "lodash/debounce"
-import { SIOConnection, SIOEvent } from "~/helpers/realtime/SIOConnection"
+import {
+  SIOConnection,
+  SIOEvent,
+  SocketClients,
+} from "~/helpers/realtime/SIOConnection"
 import {
   useI18n,
   useNuxt,
@@ -264,6 +268,7 @@ const nuxt = useNuxt()
 
 const selectedTab = ref("communication")
 
+const SIOVersions = Object.keys(SocketClients)
 const url = useStream(SIOEndpoint$, "", setSIOEndpoint)
 const clientVersion = useStream(SIOVersion$, "v4", setSIOVersion)
 const path = useStream(SIOPath$, "", setSIOPath)

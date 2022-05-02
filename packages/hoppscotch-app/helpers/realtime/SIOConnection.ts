@@ -4,7 +4,7 @@ import { logHoppRequestRunToAnalytics } from "../fb/analytics"
 import { SIOClientV2, SIOClientV3, SIOClientV4 } from "./SIOClients"
 import { SIOClientVersion } from "~/newstore/SocketIOSession"
 
-const SocketClients = {
+export const SocketClients = {
   v2: SIOClientV2,
   v3: SIOClientV3,
   v4: SIOClientV4,
