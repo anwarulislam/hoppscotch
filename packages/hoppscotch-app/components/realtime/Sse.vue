@@ -11,11 +11,11 @@
               v-model="server"
               type="url"
               autocomplete="off"
-              :class="{ error: !serverValid }"
+              :class="{ error: !isUrlValid }"
               class="flex flex-1 w-full px-4 py-2 border rounded-l bg-primaryLight border-divider text-secondaryDark"
               :placeholder="$t('sse.url')"
               :disabled="connectionSSEState"
-              @keyup.enter="serverValid ? toggleSSEConnection() : null"
+              @keyup.enter="isUrlValid ? toggleSSEConnection() : null"
             />
             <label
               for="event-type"
@@ -29,12 +29,12 @@
               class="flex flex-1 w-full px-4 py-2 border rounded-r bg-primaryLight border-divider text-secondaryDark"
               spellcheck="false"
               :disabled="connectionSSEState"
-              @keyup.enter="serverValid ? toggleSSEConnection() : null"
+              @keyup.enter="isUrlValid ? toggleSSEConnection() : null"
             />
           </div>
           <ButtonPrimary
             id="start"
-            :disabled="!serverValid"
+            :disabled="!isUrlValid"
             name="start"
             class="w-32"
             :label="
@@ -53,13 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  ref,
-  computed,
-  watch,
-  onUnmounted,
-  onMounted,
-} from "@nuxtjs/composition-api"
+import { ref, watch, onUnmounted, onMounted } from "@nuxtjs/composition-api"
 import "splitpanes/dist/splitpanes.css"
 import debounce from "lodash/debounce"
 import { logHoppRequestRunToAnalytics } from "~/helpers/fb/analytics"
@@ -105,7 +99,6 @@ const sse = useStream(SSESocket$, null, setSSESocket)
 const log = useStream(SSELog$, [], setSSELog)
 
 const isUrlValid = ref(true)
-const serverValid = computed(() => isUrlValid.value)
 
 let worker: Worker
 

@@ -12,17 +12,17 @@
             type="url"
             autocomplete="off"
             spellcheck="false"
-            :class="{ error: !urlValid }"
+            :class="{ error: !isUrlValid }"
             :placeholder="`${t('websocket.url')}`"
             :disabled="
               connectionState === 'CONNECTED' ||
               connectionState === 'CONNECTING'
             "
-            @keyup.enter="urlValid ? toggleConnection() : null"
+            @keyup.enter="isUrlValid ? toggleConnection() : null"
           />
           <ButtonPrimary
             id="connect"
-            :disabled="!urlValid"
+            :disabled="!isUrlValid"
             class="w-32"
             name="connect"
             :label="
@@ -168,13 +168,7 @@
   </AppPaneLayout>
 </template>
 <script setup lang="ts">
-import {
-  computed,
-  ref,
-  watch,
-  onUnmounted,
-  onMounted,
-} from "@nuxtjs/composition-api"
+import { ref, watch, onUnmounted, onMounted } from "@nuxtjs/composition-api"
 import debounce from "lodash/debounce"
 import draggable from "vuedraggable"
 import {
@@ -223,7 +217,6 @@ const log = useStream(WSLog$, [], setWSLog)
 // DATA
 const isUrlValid = ref(true)
 const activeProtocols = ref<string[]>([])
-const urlValid = computed(() => isUrlValid)
 let worker: Worker
 watch(url, (newUrl) => {
   if (newUrl) debouncer()

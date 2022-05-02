@@ -46,14 +46,14 @@
               type="url"
               autocomplete="off"
               spellcheck="false"
-              :class="{ error: !urlValid }"
+              :class="{ error: !isUrlValid }"
               class="flex flex-1 w-full px-4 py-2 border bg-primaryLight border-divider text-secondaryDark"
               :placeholder="`${t('socketio.url')}`"
               :disabled="
                 connectionState === 'CONNECTED' ||
                 connectionState === 'CONNECTING'
               "
-              @keyup.enter="urlValid ? toggleConnection() : null"
+              @keyup.enter="isUrlValid ? toggleConnection() : null"
             />
             <input
               id="socketio-path"
@@ -64,12 +64,12 @@
                 connectionState === 'CONNECTED' ||
                 connectionState === 'CONNECTING'
               "
-              @keyup.enter="urlValid ? toggleConnection() : null"
+              @keyup.enter="isUrlValid ? toggleConnection() : null"
             />
           </div>
           <ButtonPrimary
             id="connect"
-            :disabled="!urlValid"
+            :disabled="!isUrlValid"
             name="connect"
             class="w-32"
             :label="
@@ -234,13 +234,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  onMounted,
-  onUnmounted,
-  ref,
-  watch,
-} from "@nuxtjs/composition-api"
+import { onMounted, onUnmounted, ref, watch } from "@nuxtjs/composition-api"
 // All Socket.IO client version imports
 import debounce from "lodash/debounce"
 import { SIOConnection, SIOEvent } from "~/helpers/realtime/SIOConnection"
@@ -288,8 +282,6 @@ const isUrlValid = ref(true)
 const authType = ref<"None" | "Bearer">("None")
 const bearerToken = ref("")
 const authActive = ref(true)
-
-const urlValid = computed(() => isUrlValid.value)
 
 let worker: Worker
 

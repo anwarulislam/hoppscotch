@@ -14,11 +14,11 @@
             class="w-full px-4 py-2 border rounded bg-primaryLight border-divider text-secondaryDark"
             :placeholder="$t('mqtt.url')"
             :disabled="connectionState"
-            @keyup.enter="validUrl ? toggleConnection() : null"
+            @keyup.enter="isUrlValid ? toggleConnection() : null"
           />
           <ButtonPrimary
             id="connect"
-            :disabled="!validUrl"
+            :disabled="!isUrlValid"
             class="w-32"
             :label="
               connectionState ? $t('action.disconnect') : $t('action.connect')
@@ -188,7 +188,6 @@ const password = ref("")
 
 let worker: Worker
 
-const validUrl = computed(() => isUrlValid.value)
 const canpublish = computed(
   () => pubTopic.value !== "" && msg.value !== "" && connectionState.value
 )
