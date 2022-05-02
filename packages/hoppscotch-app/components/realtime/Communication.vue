@@ -155,16 +155,10 @@ const contentType = ref<keyof typeof knownContentTypes>("JSON")
 const eventName = ref("")
 const communicationBody = ref("")
 
-const rawInputEditorLang = computed(() =>
-  getEditorLangForMimeType(contentType.value)
-)
+const rawInputEditorLang = computed(() => knownContentTypes[contentType.value])
 const langLinter = computed(() =>
   isJSONContentType(contentType.value) ? jsonLinter : null
 )
-
-const getEditorLangForMimeType = (mimeType: keyof typeof knownContentTypes) => {
-  return knownContentTypes[mimeType]
-}
 
 useCodemirror(
   wsCommunicationBody,
