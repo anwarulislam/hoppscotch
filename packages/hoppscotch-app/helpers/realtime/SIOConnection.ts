@@ -2,7 +2,7 @@ import { BehaviorSubject } from "rxjs"
 // import wildcard from "socketio-wildcard"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
 import { SIOClientV2, SIOClientV3, SIOClientV4 } from "./SIOClients"
-import { ClientVersion } from "~/newstore/SocketIOSession"
+import { SIOClientVersion } from "~/newstore/SocketIOSession"
 
 const SocketClients = {
   v2: SIOClientV2,
@@ -13,7 +13,7 @@ const SocketClients = {
 export type ConnectionOption = {
   url: string
   path: string
-  clientVersion: ClientVersion
+  clientVersion: SIOClientVersion
   bearerToken?: string
   authType?: "None" | "Bearer"
   authActive?: boolean

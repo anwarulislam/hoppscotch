@@ -11,12 +11,12 @@ import { ConnectionState } from "~/helpers/realtime/SIOConnection"
 
 type SocketIO = SocketV2 | SocketV3 | SocketV4
 
-export type ClientVersion = "v4" | "v3" | "v2"
+export type SIOClientVersion = "v4" | "v3" | "v2"
 
 type HoppSIORequest = {
   endpoint: string
   path: string
-  version: ClientVersion
+  version: SIOClientVersion
 }
 
 type HoppSIOSession = {
@@ -66,7 +66,7 @@ const dispatchers = defineDispatchers({
   },
   setVersion(
     curr: HoppSIOSession,
-    { newVersion }: { newVersion: ClientVersion }
+    { newVersion }: { newVersion: SIOClientVersion }
   ) {
     return {
       request: {
