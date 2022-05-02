@@ -491,7 +491,8 @@
     "event_name": "Event Name",
     "events": "Events",
     "log": "Log",
-    "url": "URL"
+    "url": "URL",
+    "connection_not_authorized": "This SocketIO connection does not use any authentication."
   },
   "sse": {
     "event_type": "Event type",

@@ -187,7 +187,7 @@
               :alt="`${t('empty.authorization')}`"
             />
             <span class="pb-4 text-center">
-              This SocketIO connection does not use any authentication.
+              {{ t("socketio.connection_not_authorized") }}
             </span>
             <ButtonSecondary
               outline
@@ -235,7 +235,6 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from "@nuxtjs/composition-api"
-// All Socket.IO client version imports
 import debounce from "lodash/debounce"
 import { SIOConnection, SIOEvent } from "~/helpers/realtime/SIOConnection"
 import {
@@ -247,7 +246,7 @@ import {
 } from "~/helpers/utils/composables"
 import {
   addSIOLogLine,
-  ClientVersion,
+  SIOClientVersion,
   setSIOConnectionState,
   setSIOEndpoint,
   setSIOLog,
@@ -399,7 +398,7 @@ const toggleConnection = () => {
 const sendMessage = (event: { message: string; eventName: string }) => {
   socket.sendMessage(event)
 }
-const onSelectVersion = (version: ClientVersion) => {
+const onSelectVersion = (version: SIOClientVersion) => {
   clientVersion.value = version
   versionOptions.value.tippy().hide()
 }
