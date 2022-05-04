@@ -1,3 +1,4 @@
+import wildcard from "socketio-wildcard"
 import ClientV2 from "socket.io-client-v2"
 import { io as ClientV4, Socket as SocketV4 } from "socket.io-client-v4"
 import { io as ClientV3, Socket as SocketV3 } from "socket.io-client-v3"
@@ -65,7 +66,8 @@ export class SIOClientV3 implements SIOClient {
 export class SIOClientV2 implements SIOClient {
   private client: any | undefined
   connect(url: string, opts?: Options) {
-    this.client = new (ClientV2 as any)(url, opts)
+    this.client = new ClientV2(url, opts)
+    wildcard(ClientV2.Manager)(this.client)
   }
 
   on(event: PossibleEvent, cb: (data: any) => void): void {

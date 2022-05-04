@@ -1,5 +1,4 @@
 import { BehaviorSubject } from "rxjs"
-// import wildcard from "socketio-wildcard"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
 import { SIOClientV2, SIOClientV3, SIOClientV4, SIOClient } from "./SIOClients"
 import { SIOClientVersion } from "~/newstore/SocketIOSession"
@@ -69,8 +68,6 @@ export class SIOConnection {
       } else {
         this.socket.connect(url)
       }
-
-      // wildcard(this.socket.Manager)(this.socket.client)
 
       this.socket.on("connect", () => {
         this.connectionState$.next("CONNECTED")
