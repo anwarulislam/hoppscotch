@@ -393,8 +393,9 @@ const toggleConnection = () => {
       url: url.value,
       path: path.value || "/socket.io",
       clientVersion: clientVersion.value,
-      authType: authType.value,
-      bearerToken: authType.value === "Bearer" ? bearerToken.value : "",
+      auth: authActive.value
+        ? { type: authType.value, token: bearerToken.value }
+        : undefined,
     })
   }
   // Otherwise, it's disconnecting.

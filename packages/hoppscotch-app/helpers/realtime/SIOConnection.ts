@@ -9,13 +9,13 @@ export const SocketClients = {
   v4: SIOClientV4,
 }
 
+type SIOAuth = { type: "None" | "Bearer"; token: string }
+
 export type ConnectionOption = {
   url: string
   path: string
   clientVersion: SIOClientVersion
-  bearerToken?: string
-  authType?: "None" | "Bearer"
-  authActive?: boolean
+  auth: SIOAuth | undefined
 }
 
 export type SIOEvent = { time: number } & (
@@ -42,14 +42,7 @@ export class SIOConnection {
     this.events$.next([...this.events$.value, event])
   }
 
-  connect({
-    url,
-    path,
-    clientVersion,
-    bearerToken,
-    authType,
-    authActive,
-  }: ConnectionOption) {
+  connect({ url, path, clientVersion, auth }: ConnectionOption) {
     this.connectionState$.next("CONNECTING")
     this.addEvent({
       time: Date.now(),
@@ -58,11 +51,11 @@ export class SIOConnection {
     try {
       this.socket = new SocketClients[clientVersion]()
 
-      if (authActive && authType === "Bearer") {
+      if (auth && auth.type === "Bearer") {
         this.socket.connect(url, {
           path,
           auth: {
-            token: bearerToken,
+            token: auth.token,
           },
         })
       } else {
