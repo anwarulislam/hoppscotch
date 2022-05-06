@@ -200,6 +200,7 @@ import { WSConnection, WSEvent } from "~/helpers/realtime/WSConnection"
 const nuxt = useNuxt()
 const t = useI18n()
 const toast = useToast()
+const { subscribeToStream } = useStreamSubscriber()
 
 const selectedTab = ref<"communication" | "protocols">("communication")
 const url = useStream(WSEndpoint$, "", setWSEndpoint)
@@ -245,8 +246,6 @@ const workerResponseHandler = ({
 onMounted(() => {
   worker = nuxt.value.$worker.createRejexWorker()
   worker.addEventListener("message", workerResponseHandler)
-
-  const { subscribeToStream } = useStreamSubscriber()
 
   subscribeToStream(socket.value.events$, (events: WSEvent[]) => {
     const event = events[events.length - 1]

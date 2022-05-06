@@ -51,7 +51,7 @@ export class SIOConnection {
     try {
       this.socket = new SocketClients[clientVersion]()
 
-      if (auth && auth.type === "Bearer") {
+      if (auth?.type === "Bearer") {
         this.socket.connect(url, {
           path,
           auth: {

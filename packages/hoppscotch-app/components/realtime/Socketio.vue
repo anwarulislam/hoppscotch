@@ -265,6 +265,7 @@ import {
 const t = useI18n()
 const toast = useToast()
 const nuxt = useNuxt()
+const { subscribeToStream } = useStreamSubscriber()
 
 const selectedTab = ref("communication")
 
@@ -300,8 +301,6 @@ const workerResponseHandler = ({
 onMounted(() => {
   worker = nuxt.value.$worker.createRejexWorker()
   worker.addEventListener("message", workerResponseHandler)
-
-  const { subscribeToStream } = useStreamSubscriber()
 
   subscribeToStream(socket.events$, (events: SIOEvent[]) => {
     const event = events[events.length - 1]
