@@ -13,7 +13,10 @@
             spellcheck="false"
             class="w-full px-4 py-2 border rounded bg-primaryLight border-divider text-secondaryDark"
             :placeholder="$t('mqtt.url')"
-            :disabled="connectionState"
+            :disabled="
+              connectionState === 'CONNECTED' ||
+              connectionState === 'CONNECTING'
+            "
             @keyup.enter="isUrlValid ? toggleConnection() : null"
           />
           <ButtonPrimary
@@ -21,9 +24,11 @@
             :disabled="!isUrlValid"
             class="w-32"
             :label="
-              connectionState ? $t('action.disconnect') : $t('action.connect')
+              connectionState === 'DISCONNECTED'
+                ? t('action.connect')
+                : t('action.disconnect')
             "
-            :loading="connectingState"
+            :loading="connectionState === 'CONNECTING'"
             @click.native="toggleConnection"
           />
         </div>
@@ -75,7 +80,7 @@
       <div class="flex px-4 space-x-2">
         <input
           id="mqtt-message"
-          v-model="msg"
+          v-model="message"
           class="input"
           type="text"
           autocomplete="off"
@@ -112,7 +117,9 @@
           name="get"
           :disabled="!cansubscribe"
           :label="
-            subscriptionState ? $t('mqtt.unsubscribe') : $t('mqtt.subscribe')
+            socket.subscriptionState
+              ? $t('mqtt.unsubscribe')
+              : $t('mqtt.subscribe')
           "
           reverse
           @click.native="toggleSubscription"
@@ -130,18 +137,11 @@ import {
   onUnmounted,
   onMounted,
 } from "@nuxtjs/composition-api"
-import Paho, { ConnectionOptions } from "paho-mqtt"
 import debounce from "lodash/debounce"
-import { logHoppRequestRunToAnalytics } from "~/helpers/fb/analytics"
 import {
   MQTTEndpoint$,
   setMQTTEndpoint,
-  MQTTConnectingState$,
-  MQTTConnectionState$,
-  setMQTTConnectingState,
   setMQTTConnectionState,
-  MQTTSubscriptionState$,
-  setMQTTSubscriptionState,
   MQTTSocket$,
   setMQTTSocket,
   MQTTLog$,
@@ -152,44 +152,36 @@ import {
   useI18n,
   useNuxt,
   useStream,
+  useStreamSubscriber,
   useToast,
 } from "~/helpers/utils/composables"
+import { MQTTConnection, MQTTEvent } from "~/helpers/realtime/MQTTConnection"
 
 const t = useI18n()
 const nuxt = useNuxt()
 const toast = useToast()
+const { subscribeToStream } = useStreamSubscriber()
 
 const url = useStream(MQTTEndpoint$, "", setMQTTEndpoint)
+const log = useStream(MQTTLog$, [], setMQTTLog)
+const socket = useStream(MQTTSocket$, new MQTTConnection(), setMQTTSocket)
 const connectionState = useStream(
-  MQTTConnectionState$,
-  false,
+  socket.value.connectionState$,
+  "DISCONNECTED",
   setMQTTConnectionState
 )
-const connectingState = useStream(
-  MQTTConnectingState$,
-  false,
-  setMQTTConnectingState
-)
-const subscriptionState = useStream(
-  MQTTSubscriptionState$,
-  false,
-  setMQTTSubscriptionState
-)
-const log = useStream(MQTTLog$, [], setMQTTLog)
-const client = useStream(MQTTSocket$, null, setMQTTSocket)
 
 const isUrlValid = ref(true)
 const pubTopic = ref("")
 const subTopic = ref("")
-const msg = ref("")
-const manualDisconnect = ref(false)
+const message = ref("")
 const username = ref("")
 const password = ref("")
 
 let worker: Worker
 
 const canpublish = computed(
-  () => pubTopic.value !== "" && msg.value !== "" && connectionState.value
+  () => pubTopic.value !== "" && message.value !== "" && connectionState.value
 )
 const cansubscribe = computed(
   () => subTopic.value !== "" && connectionState.value
@@ -206,6 +198,97 @@ const workerResponseHandler = ({
 onMounted(() => {
   worker = nuxt.value.$worker.createRejexWorker()
   worker.addEventListener("message", workerResponseHandler)
+
+  subscribeToStream(socket.value.events$, (events: MQTTEvent[]) => {
+    const event = events[events.length - 1]
+    switch (event?.type) {
+      case "CONNECTING":
+        log.value = [
+          {
+            payload: `${t("state.connecting_to", { name: url.value })}`,
+            source: "info",
+            color: "var(--accent-color)",
+            ts: "",
+          },
+        ]
+        break
+
+      case "CONNECTED":
+        log.value = [
+          {
+            payload: `${t("state.connected_to", { name: url.value })}`,
+            source: "info",
+            color: "var(--accent-color)",
+            ts: new Date().toLocaleTimeString(),
+          },
+        ]
+        toast.success(`${t("state.connected")}`)
+        break
+
+      case "MESSAGE_SENT":
+        addMQTTLogLine({
+          payload: event.message,
+          source: "client",
+          ts: new Date().toLocaleTimeString(),
+        })
+        break
+
+      case "MESSAGE_RECEIVED":
+        addMQTTLogLine({
+          payload: event.message,
+          source: "server",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "SUBSCRIBED":
+        addMQTTLogLine({
+          payload:
+            `Successfully ` +
+            (socket.value.subscriptionState$.value
+              ? "subscribed"
+              : "unsubscribed") +
+            ` to topic: ${subTopic.value}`,
+          source: "server",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "SUBSCRIPTION_FAILED":
+        addMQTTLogLine({
+          payload:
+            `Failed to ` +
+            (socket.value.subscriptionState$.value
+              ? "unsubscribe"
+              : "subscribe") +
+            ` to topic: ${subTopic.value}`,
+          source: "server",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "ERROR":
+        addMQTTLogLine({
+          payload:
+            event.error ||
+            (t("state.disconnected_from", { name: url.value }) as string),
+          source: "info",
+          color: "#ff5555",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "DISCONNECTED":
+        addMQTTLogLine({
+          payload: t("state.disconnected_from", { name: url.value }) as string,
+          source: "info",
+          color: "#ff5555",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        toast.error(`${t("state.disconnected")}`)
+        break
+    }
+  })
 })
 
 const debouncer = debounce(function () {
@@ -222,174 +305,22 @@ onUnmounted(() => {
 
 // METHODS
 
-const connect = () => {
-  connectingState.value = true
-  log.value = [
-    {
-      payload: t("state.connecting_to", { name: url.value }) as string,
-      source: "info",
-      color: "var(--accent-color)",
-      ts: new Date().toLocaleTimeString(),
-    },
-  ]
-  const parseUrl = new URL(url.value)
-  client.value = new Paho.Client(
-    `${parseUrl.hostname}${parseUrl.pathname !== "/" ? parseUrl.pathname : ""}`,
-    parseUrl.port !== "" ? Number(parseUrl.port) : 8081,
-    "hoppscotch"
-  )
-  const connectOptions: ConnectionOptions = {
-    onSuccess: onConnectionSuccess,
-    onFailure: onConnectionFailure,
-    useSSL: parseUrl.protocol !== "ws:",
-  }
-  if (username.value !== "") {
-    connectOptions.userName = username.value
-  }
-  if (password.value !== "") {
-    connectOptions.password = password.value
-  }
-  client.value.connect(connectOptions)
-  client.value.onConnectionLost = onConnectionLost
-  client.value.onMessageArrived = onMessageArrived
-
-  logHoppRequestRunToAnalytics({
-    platform: "mqtt",
-  })
-}
-const onConnectionFailure = () => {
-  connectingState.value = false
-  connectionState.value = false
-  addMQTTLogLine({
-    payload: t("error.something_went_wrong") as string,
-    source: "info",
-    color: "#ff5555",
-    ts: new Date().toLocaleTimeString(),
-  })
-}
-const onConnectionSuccess = () => {
-  connectingState.value = false
-  connectionState.value = true
-  addMQTTLogLine({
-    payload: t("state.connected_to", { name: url.value }) as string,
-    source: "info",
-    color: "var(--accent-color)",
-    ts: new Date().toLocaleTimeString(),
-  })
-  toast.success(t("state.connected") as string)
-}
-const onMessageArrived = (data: {
-  payloadString: string
-  destinationName: string
-}) => {
-  const { payloadString, destinationName } = data
-  addMQTTLogLine({
-    payload: `Message: ${payloadString} arrived on topic: ${destinationName}`,
-    source: "info",
-    color: "var(--accent-color)",
-    ts: new Date().toLocaleTimeString(),
-  })
-}
 const toggleConnection = () => {
-  if (connectionState.value) {
-    disconnect()
-  } else {
-    connect()
+  // If it is connecting:
+  if (connectionState.value === "DISCONNECTED") {
+    return socket.value.connect(url.value, username.value, password.value)
   }
-}
-const disconnect = () => {
-  manualDisconnect.value = true
-  client.value?.disconnect()
-  addMQTTLogLine({
-    payload: t("state.disconnected_from", { name: url.value }) as string,
-    source: "info",
-    color: "#ff5555",
-    ts: new Date().toLocaleTimeString(),
-  })
-}
-const onConnectionLost = () => {
-  connectingState.value = false
-  connectionState.value = false
-  if (manualDisconnect.value) {
-    toast.error(t("state.disconnected") as string)
-  } else {
-    toast.error(t("error.something_went_wrong") as string)
-  }
-  manualDisconnect.value = false
-  subscriptionState.value = false
+  // Otherwise, it's disconnecting.
+  socket.value.disconnect()
 }
 const publish = () => {
-  try {
-    // it was publish
-    client.value?.send(pubTopic.value, msg.value, 0, false)
-    addMQTTLogLine({
-      payload: `Published message: ${msg.value} to topic: ${pubTopic.value}`,
-      ts: new Date().toLocaleTimeString(),
-      source: "info",
-      color: "var(--accent-color)",
-    })
-  } catch (e) {
-    addMQTTLogLine({
-      payload:
-        t("error.something_went_wrong") +
-        `while publishing msg: ${msg.value} to topic:  ${pubTopic.value}`,
-      source: "info",
-      color: "#ff5555",
-      ts: new Date().toLocaleTimeString(),
-    })
-  }
+  socket.value?.publish(pubTopic.value, message.value)
 }
 const toggleSubscription = () => {
-  if (subscriptionState.value) {
-    unsubscribe()
+  if (socket.value.subscriptionState$.value) {
+    socket.value.unsubscribe(subTopic.value)
   } else {
-    subscribe()
+    socket.value.subscribe(subTopic.value)
   }
-}
-const subscribe = () => {
-  try {
-    client.value?.subscribe(subTopic.value, {
-      onSuccess: usubSuccess,
-      onFailure: usubFailure,
-    })
-  } catch (e) {
-    addMQTTLogLine({
-      payload:
-        t("error.something_went_wrong") +
-        `while subscribing to topic:  ${subTopic.value}`,
-      source: "info",
-      color: "#ff5555",
-      ts: new Date().toLocaleTimeString(),
-    })
-  }
-}
-const usubSuccess = () => {
-  subscriptionState.value = !subscriptionState.value
-  addMQTTLogLine({
-    payload:
-      `Successfully ` +
-      (subscriptionState.value ? "subscribed" : "unsubscribed") +
-      ` to topic: ${subTopic.value}`,
-    source: "info",
-    color: "var(--accent-color)",
-    ts: new Date().toLocaleTimeString(),
-  })
-}
-const usubFailure = () => {
-  addMQTTLogLine({
-    payload:
-      `Failed to ` +
-      (subscriptionState.value ? "unsubscribe" : "subscribe") +
-      ` to topic: ${subTopic.value}`,
-    source: "info",
-    color: "#ff5555",
-    ts: new Date().toLocaleTimeString(),
-  })
-}
-const unsubscribe = () => {
-  client.value?.unsubscribe(subTopic.value, {
-    onSuccess: usubSuccess,
-    onFailure: usubFailure,
-  })
 }
 </script>
