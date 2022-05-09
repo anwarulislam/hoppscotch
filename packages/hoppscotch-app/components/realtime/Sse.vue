@@ -14,7 +14,9 @@
               :class="{ error: !isUrlValid }"
               class="flex flex-1 w-full px-4 py-2 border rounded-l bg-primaryLight border-divider text-secondaryDark"
               :placeholder="$t('sse.url')"
-              :disabled="connectionSSEState"
+              :disabled="
+                connectionState === 'STARTED' || connectionState === 'STARTING'
+              "
               @keyup.enter="isUrlValid ? toggleSSEConnection() : null"
             />
             <label
@@ -28,7 +30,9 @@
               v-model="eventType"
               class="flex flex-1 w-full px-4 py-2 border rounded-r bg-primaryLight border-divider text-secondaryDark"
               spellcheck="false"
-              :disabled="connectionSSEState"
+              :disabled="
+                connectionState === 'STARTED' || connectionState === 'STARTING'
+              "
               @keyup.enter="isUrlValid ? toggleSSEConnection() : null"
             />
           </div>
@@ -38,9 +42,11 @@
             name="start"
             class="w-32"
             :label="
-              !connectionSSEState ? $t('action.start') : $t('action.stop')
+              connectionState === 'STOPPED'
+                ? t('action.start')
+                : t('action.stop')
             "
-            :loading="connectingState"
+            :loading="connectionState === 'STARTING'"
             @click.native="toggleSSEConnection"
           />
         </div>
@@ -56,7 +62,6 @@
 import { ref, watch, onUnmounted, onMounted } from "@nuxtjs/composition-api"
 import "splitpanes/dist/splitpanes.css"
 import debounce from "lodash/debounce"
-import { logHoppRequestRunToAnalytics } from "~/helpers/fb/analytics"
 import {
   SSEEndpoint$,
   setSSEEndpoint,
@@ -64,10 +69,7 @@ import {
   setSSEEventType,
   SSESocket$,
   setSSESocket,
-  SSEConnectingState$,
-  SSEConnectionState$,
   setSSEConnectionState,
-  setSSEConnectingState,
   SSELog$,
   setSSELog,
   addSSELogLine,
@@ -77,25 +79,23 @@ import {
   useStream,
   useToast,
   useI18n,
+  useStreamSubscriber,
 } from "~/helpers/utils/composables"
+import { SSEConnection, SSEEvent } from "~/helpers/realtime/SSEConnection"
 
 const t = useI18n()
 const nuxt = useNuxt()
 const toast = useToast()
+const { subscribeToStream } = useStreamSubscriber()
 
-const connectionSSEState = useStream(
-  SSEConnectionState$,
-  false,
+const sse = useStream(SSESocket$, new SSEConnection(), setSSESocket)
+const connectionState = useStream(
+  sse.value.connectionState$,
+  "STOPPED",
   setSSEConnectionState
-)
-const connectingState = useStream(
-  SSEConnectingState$,
-  false,
-  setSSEConnectingState
 )
 const server = useStream(SSEEndpoint$, "", setSSEEndpoint)
 const eventType = useStream(SSEEventType$, "", setSSEEventType)
-const sse = useStream(SSESocket$, null, setSSESocket)
 const log = useStream(SSELog$, [], setSSELog)
 
 const isUrlValid = ref(true)
@@ -121,88 +121,76 @@ const workerResponseHandler = ({
 onMounted(() => {
   worker = nuxt.value.$worker.createRejexWorker()
   worker.addEventListener("message", workerResponseHandler)
+
+  subscribeToStream(sse.value.events$, (events: SSEEvent[]) => {
+    const event = events[events.length - 1]
+    switch (event?.type) {
+      case "STARTING":
+        log.value = [
+          {
+            payload: `${t("state.connecting_to", { name: server.value })}`,
+            source: "info",
+            color: "var(--accent-color)",
+            ts: "",
+          },
+        ]
+        break
+
+      case "STARTED":
+        log.value = [
+          {
+            payload: `${t("state.connected_to", { name: server.value })}`,
+            source: "info",
+            color: "var(--accent-color)",
+            ts: new Date().toLocaleTimeString(),
+          },
+        ]
+        toast.success(`${t("state.connected")}`)
+        break
+
+      case "MESSAGE_RECEIVED":
+        addSSELogLine({
+          payload: event.message,
+          source: "server",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "ERROR":
+        addSSELogLine({
+          payload:
+            event.error ||
+            (t("state.disconnected_from", { name: server.value }) as string),
+          source: "info",
+          color: "#ff5555",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        break
+
+      case "STOPPED":
+        addSSELogLine({
+          payload: t("state.disconnected_from", {
+            name: server.value,
+          }) as string,
+          source: "info",
+          color: "#ff5555",
+          ts: new Date(event.time).toLocaleTimeString(),
+        })
+        toast.error(`${t("state.disconnected")}`)
+        break
+    }
+  })
 })
 
 // METHODS
 
 const toggleSSEConnection = () => {
   // If it is connecting:
-  if (!connectionSSEState.value) return start()
-  // Otherwise, it's disconnecting.
-  else return stop()
-}
-const start = () => {
-  connectingState.value = true
-  log.value = [
-    {
-      payload: t("state.connecting_to", { name: server.value }) as string,
-      source: "info",
-      color: "var(--accent-color)",
-      ts: "",
-    },
-  ]
-  if (typeof EventSource !== "undefined") {
-    try {
-      sse.value = new EventSource(server.value)
-      sse.value.onopen = () => {
-        connectingState.value = false
-        connectionSSEState.value = true
-        log.value = [
-          {
-            payload: t("state.connected_to", { name: server.value }) as string,
-            source: "info",
-            color: "var(--accent-color)",
-            ts: new Date().toLocaleTimeString(),
-          },
-        ]
-        toast.success(t("state.connected") as string)
-      }
-      sse.value.onerror = handleSSEError
-      sse.value.addEventListener(eventType.value, ({ data }) => {
-        addSSELogLine({
-          payload: data,
-          source: "server",
-          ts: new Date().toLocaleTimeString(),
-        })
-      })
-    } catch (e) {
-      handleSSEError(e)
-      toast.error(t("error.something_went_wrong") as string)
-    }
-  } else {
-    log.value = [
-      {
-        payload: t("error.browser_support_sse") as string,
-        source: "info",
-        color: "#ff5555",
-        ts: new Date().toLocaleTimeString(),
-      },
-    ]
+  if (connectionState.value === "STOPPED") {
+    return sse.value.start(server.value, eventType.value)
   }
-
-  logHoppRequestRunToAnalytics({
-    platform: "sse",
-  })
-}
-const handleSSEError = (error: any) => {
-  stop()
-  connectionSSEState.value = false
-  addSSELogLine({
-    payload: t("error.something_went_wrong") as string,
-    source: "info",
-    color: "#ff5555",
-    ts: new Date().toLocaleTimeString(),
-  })
-  if (error !== null)
-    addSSELogLine({
-      payload: error,
-      source: "info",
-      color: "#ff5555",
-      ts: new Date().toLocaleTimeString(),
-    })
-}
-const stop = () => {
-  sse.value?.close()
+  // Otherwise, it's disconnecting.
+  sse.value.stop()
 }
 
 onUnmounted(() => {

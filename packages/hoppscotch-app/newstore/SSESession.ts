@@ -4,6 +4,10 @@ import {
   HoppRealtimeLog,
   HoppRealtimeLogLine,
 } from "~/helpers/types/HoppRealtimeLog"
+import {
+  ConnectionState,
+  SSEConnection,
+} from "~/helpers/realtime/SSEConnection"
 
 type HoppSSERequest = {
   endpoint: string
@@ -12,10 +16,9 @@ type HoppSSERequest = {
 
 type HoppSSESession = {
   request: HoppSSERequest
-  connectingState: boolean
-  connectionState: boolean
+  connectionState: ConnectionState
   log: HoppRealtimeLog
-  socket: EventSource | null
+  socket: SSEConnection
 }
 
 const defaultSSERequest: HoppSSERequest = {
@@ -25,9 +28,8 @@ const defaultSSERequest: HoppSSERequest = {
 
 const defaultSSESession: HoppSSESession = {
   request: defaultSSERequest,
-  connectionState: false,
-  connectingState: false,
-  socket: null,
+  connectionState: "STOPPED",
+  socket: new SSEConnection(),
   log: [],
 }
 
@@ -56,19 +58,14 @@ const dispatchers = defineDispatchers({
       },
     }
   },
-  setSocket(_: HoppSSESession, { socket }: { socket: EventSource | null }) {
+  setSocket(_: HoppSSESession, { socket }: { socket: SSEConnection }) {
     return {
       socket,
     }
   },
-  setConnectionState(_: HoppSSESession, { state }: { state: boolean }) {
+  setConnectionState(_: HoppSSESession, { state }: { state: ConnectionState }) {
     return {
       connectionState: state,
-    }
-  },
-  setConnectingState(_: HoppSSESession, { state }: { state: boolean }) {
-    return {
-      connectingState: state,
     }
   },
   setLog(_: HoppSSESession, { log }: { log: HoppRealtimeLog }) {
@@ -112,7 +109,7 @@ export function setSSEEventType(newType: string) {
   })
 }
 
-export function setSSESocket(socket: EventSource | null) {
+export function setSSESocket(socket: SSEConnection) {
   SSESessionStore.dispatch({
     dispatcher: "setSocket",
     payload: {
@@ -121,17 +118,9 @@ export function setSSESocket(socket: EventSource | null) {
   })
 }
 
-export function setSSEConnectionState(state: boolean) {
+export function setSSEConnectionState(state: ConnectionState) {
   SSESessionStore.dispatch({
     dispatcher: "setConnectionState",
-    payload: {
-      state,
-    },
-  })
-}
-export function setSSEConnectingState(state: boolean) {
-  SSESessionStore.dispatch({
-    dispatcher: "setConnectingState",
     payload: {
       state,
     },
