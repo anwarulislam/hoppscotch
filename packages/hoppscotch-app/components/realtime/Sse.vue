@@ -160,7 +160,7 @@ onMounted(() => {
         addSSELogLine({
           payload:
             event.error ||
-            (t("state.disconnected_from", { name: server.value }) as string),
+            t("state.disconnected_from", { name: server.value }).toString(),
           source: "info",
           color: "#ff5555",
           ts: new Date(event.time).toLocaleTimeString(),
@@ -171,7 +171,7 @@ onMounted(() => {
         addSSELogLine({
           payload: t("state.disconnected_from", {
             name: server.value,
-          }) as string,
+          }).toString(),
           source: "info",
           color: "#ff5555",
           ts: new Date(event.time).toLocaleTimeString(),

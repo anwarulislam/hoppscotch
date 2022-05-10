@@ -293,7 +293,7 @@ onMounted(() => {
         addWSLogLine({
           payload:
             event.error ||
-            (t("state.disconnected_from", { name: url.value }) as string),
+            t("state.disconnected_from", { name: url.value }).toString(),
           source: "info",
           color: "#ff5555",
           ts: new Date(event.time).toLocaleTimeString(),
@@ -302,7 +302,7 @@ onMounted(() => {
 
       case "DISCONNECTED":
         addWSLogLine({
-          payload: t("state.disconnected_from", { name: url.value }) as string,
+          payload: t("state.disconnected_from", { name: url.value }).toString(),
           source: "info",
           color: "#ff5555",
           ts: new Date(event.time).toLocaleTimeString(),
