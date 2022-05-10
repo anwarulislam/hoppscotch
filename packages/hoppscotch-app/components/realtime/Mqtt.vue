@@ -90,7 +90,7 @@
         <ButtonPrimary
           id="publish"
           name="get"
-          :disabled="!canpublish"
+          :disabled="!canPublish"
           :label="$t('mqtt.publish')"
           @click.native="publish"
         />
@@ -115,7 +115,7 @@
         <ButtonPrimary
           id="subscribe"
           name="get"
-          :disabled="!cansubscribe"
+          :disabled="!canSubscribe"
           :label="
             socket.subscriptionState
               ? $t('mqtt.unsubscribe')
@@ -141,9 +141,8 @@ import debounce from "lodash/debounce"
 import {
   MQTTEndpoint$,
   setMQTTEndpoint,
-  setMQTTConnectionState,
-  MQTTSocket$,
-  setMQTTSocket,
+  MQTTConn$,
+  setMQTTConn,
   MQTTLog$,
   setMQTTLog,
   addMQTTLogLine,
@@ -151,6 +150,7 @@ import {
 import {
   useI18n,
   useNuxt,
+  useReadonlyStream,
   useStream,
   useStreamSubscriber,
   useToast,
@@ -164,11 +164,10 @@ const { subscribeToStream } = useStreamSubscriber()
 
 const url = useStream(MQTTEndpoint$, "", setMQTTEndpoint)
 const log = useStream(MQTTLog$, [], setMQTTLog)
-const socket = useStream(MQTTSocket$, new MQTTConnection(), setMQTTSocket)
-const connectionState = useStream(
+const socket = useStream(MQTTConn$, new MQTTConnection(), setMQTTConn)
+const connectionState = useReadonlyStream(
   socket.value.connectionState$,
-  "DISCONNECTED",
-  setMQTTConnectionState
+  "DISCONNECTED"
 )
 
 const isUrlValid = ref(true)
@@ -180,10 +179,10 @@ const password = ref("")
 
 let worker: Worker
 
-const canpublish = computed(
+const canPublish = computed(
   () => pubTopic.value !== "" && message.value !== "" && connectionState.value
 )
-const cansubscribe = computed(
+const canSubscribe = computed(
   () => subTopic.value !== "" && connectionState.value
 )
 
@@ -243,12 +242,9 @@ onMounted(() => {
 
       case "SUBSCRIBED":
         addMQTTLogLine({
-          payload:
-            `Successfully ` +
-            (socket.value.subscriptionState$.value
-              ? "subscribed"
-              : "unsubscribed") +
-            ` to topic: ${subTopic.value}`,
+          payload: socket.value.subscriptionState$.value
+            ? `${t("state.subscribed_success", { topic: subTopic.value })}`
+            : `${t("state.unsubscribed_success", { topic: subTopic.value })}`,
           source: "server",
           ts: new Date(event.time).toLocaleTimeString(),
         })
@@ -256,12 +252,9 @@ onMounted(() => {
 
       case "SUBSCRIPTION_FAILED":
         addMQTTLogLine({
-          payload:
-            `Failed to ` +
-            (socket.value.subscriptionState$.value
-              ? "unsubscribe"
-              : "subscribe") +
-            ` to topic: ${subTopic.value}`,
+          payload: socket.value.subscriptionState$.value
+            ? `${t("state.subscribed_failed", { topic: subTopic.value })}`
+            : `${t("state.unsubscribed_failed", { topic: subTopic.value })}`,
           source: "server",
           ts: new Date(event.time).toLocaleTimeString(),
         })
@@ -271,7 +264,7 @@ onMounted(() => {
         addMQTTLogLine({
           payload:
             event.error ||
-            (t("state.disconnected_from", { name: url.value }) as string),
+            t("state.disconnected_from", { name: url.value }).toString(),
           source: "info",
           color: "#ff5555",
           ts: new Date(event.time).toLocaleTimeString(),
@@ -280,7 +273,7 @@ onMounted(() => {
 
       case "DISCONNECTED":
         addMQTTLogLine({
-          payload: t("state.disconnected_from", { name: url.value }) as string,
+          payload: t("state.disconnected_from", { name: url.value }).toString(),
           source: "info",
           color: "#ff5555",
           ts: new Date(event.time).toLocaleTimeString(),

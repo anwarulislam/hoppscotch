@@ -49,7 +49,7 @@ const dispatchers = defineDispatchers({
       },
     }
   },
-  setSocket(_: HoppMQTTSession, { socket }: { socket: MQTTConnection }) {
+  setConn(_: HoppMQTTSession, { socket }: { socket: MQTTConnection }) {
     return {
       socket,
     }
@@ -99,9 +99,9 @@ export function setMQTTEndpoint(newEndpoint: string) {
   })
 }
 
-export function setMQTTSocket(socket: MQTTConnection) {
+export function setMQTTConn(socket: MQTTConnection) {
   MQTTSessionStore.dispatch({
-    dispatcher: "setSocket",
+    dispatcher: "setConn",
     payload: {
       socket,
     },
@@ -169,7 +169,7 @@ export const MQTTSubscriptionState$ = MQTTSessionStore.subject$.pipe(
   distinctUntilChanged()
 )
 
-export const MQTTSocket$ = MQTTSessionStore.subject$.pipe(
+export const MQTTConn$ = MQTTSessionStore.subject$.pipe(
   pluck("socket"),
   distinctUntilChanged()
 )
