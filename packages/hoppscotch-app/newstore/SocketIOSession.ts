@@ -7,7 +7,6 @@ import {
   HoppRealtimeLog,
   HoppRealtimeLogLine,
 } from "~/helpers/types/HoppRealtimeLog"
-import { ConnectionState } from "~/helpers/realtime/SIOConnection"
 
 type SocketIO = SocketV2 | SocketV3 | SocketV4
 
@@ -21,7 +20,6 @@ type HoppSIORequest = {
 
 type HoppSIOSession = {
   request: HoppSIORequest
-  connectionState: ConnectionState
   log: HoppRealtimeLog
   socket: SocketIO | null
 }
@@ -34,7 +32,6 @@ const defaultSIORequest: HoppSIORequest = {
 
 const defaultSIOSession: HoppSIOSession = {
   request: defaultSIORequest,
-  connectionState: "DISCONNECTED",
   socket: null,
   log: [],
 }
@@ -78,11 +75,6 @@ const dispatchers = defineDispatchers({
   setSocket(_: HoppSIOSession, { socket }: { socket: SocketIO }) {
     return {
       socket,
-    }
-  },
-  setConnectionState(_: HoppSIOSession, { state }: { state: ConnectionState }) {
-    return {
-      connectionState: state,
     }
   },
   setLog(_: HoppSIOSession, { log }: { log: HoppRealtimeLog }) {
@@ -144,14 +136,6 @@ export function setSIOSocket(socket: SocketIO) {
   })
 }
 
-export function setSIOConnectionState(state: ConnectionState) {
-  SIOSessionStore.dispatch({
-    dispatcher: "setConnectionState",
-    payload: {
-      state,
-    },
-  })
-}
 export function setSIOLog(log: HoppRealtimeLog) {
   SIOSessionStore.dispatch({
     dispatcher: "setLog",

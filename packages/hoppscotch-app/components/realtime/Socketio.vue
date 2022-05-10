@@ -244,6 +244,7 @@ import {
 import {
   useI18n,
   useNuxt,
+  useReadonlyStream,
   useStream,
   useStreamSubscriber,
   useToast,
@@ -251,7 +252,6 @@ import {
 import {
   addSIOLogLine,
   SIOClientVersion,
-  setSIOConnectionState,
   setSIOEndpoint,
   setSIOLog,
   setSIOPath,
@@ -274,10 +274,9 @@ const url = useStream(SIOEndpoint$, "", setSIOEndpoint)
 const clientVersion = useStream(SIOVersion$, "v4", setSIOVersion)
 const path = useStream(SIOPath$, "", setSIOPath)
 const socket = new SIOConnection()
-const connectionState = useStream(
+const connectionState = useReadonlyStream(
   socket.connectionState$,
-  "DISCONNECTED",
-  setSIOConnectionState
+  "DISCONNECTED"
 )
 const log = useStream(SIOLog$, [], setSIOLog)
 const authTypeOptions = ref<any>(null)
