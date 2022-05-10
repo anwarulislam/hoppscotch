@@ -4,10 +4,7 @@ import {
   HoppRealtimeLog,
   HoppRealtimeLogLine,
 } from "~/helpers/types/HoppRealtimeLog"
-import {
-  ConnectionState,
-  SSEConnection,
-} from "~/helpers/realtime/SSEConnection"
+import { SSEConnection } from "~/helpers/realtime/SSEConnection"
 
 type HoppSSERequest = {
   endpoint: string
@@ -16,7 +13,6 @@ type HoppSSERequest = {
 
 type HoppSSESession = {
   request: HoppSSERequest
-  connectionState: ConnectionState
   log: HoppRealtimeLog
   socket: SSEConnection
 }
@@ -28,7 +24,6 @@ const defaultSSERequest: HoppSSERequest = {
 
 const defaultSSESession: HoppSSESession = {
   request: defaultSSERequest,
-  connectionState: "STOPPED",
   socket: new SSEConnection(),
   log: [],
 }
@@ -61,11 +56,6 @@ const dispatchers = defineDispatchers({
   setSocket(_: HoppSSESession, { socket }: { socket: SSEConnection }) {
     return {
       socket,
-    }
-  },
-  setConnectionState(_: HoppSSESession, { state }: { state: ConnectionState }) {
-    return {
-      connectionState: state,
     }
   },
   setLog(_: HoppSSESession, { log }: { log: HoppRealtimeLog }) {
@@ -118,15 +108,6 @@ export function setSSESocket(socket: SSEConnection) {
   })
 }
 
-export function setSSEConnectionState(state: ConnectionState) {
-  SSESessionStore.dispatch({
-    dispatcher: "setConnectionState",
-    payload: {
-      state,
-    },
-  })
-}
-
 export function setSSELog(log: HoppRealtimeLog) {
   SSESessionStore.dispatch({
     dispatcher: "setLog",
@@ -162,11 +143,6 @@ export const SSEEventType$ = SSESessionStore.subject$.pipe(
 
 export const SSEConnectingState$ = SSESessionStore.subject$.pipe(
   pluck("connectingState"),
-  distinctUntilChanged()
-)
-
-export const SSEConnectionState$ = SSESessionStore.subject$.pipe(
-  pluck("connectionState"),
   distinctUntilChanged()
 )
 

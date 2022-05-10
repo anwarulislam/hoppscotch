@@ -69,7 +69,6 @@ import {
   setSSEEventType,
   SSESocket$,
   setSSESocket,
-  setSSEConnectionState,
   SSELog$,
   setSSELog,
   addSSELogLine,
@@ -80,6 +79,7 @@ import {
   useToast,
   useI18n,
   useStreamSubscriber,
+  useReadonlyStream,
 } from "~/helpers/utils/composables"
 import { SSEConnection, SSEEvent } from "~/helpers/realtime/SSEConnection"
 
@@ -89,11 +89,7 @@ const toast = useToast()
 const { subscribeToStream } = useStreamSubscriber()
 
 const sse = useStream(SSESocket$, new SSEConnection(), setSSESocket)
-const connectionState = useStream(
-  sse.value.connectionState$,
-  "STOPPED",
-  setSSEConnectionState
-)
+const connectionState = useReadonlyStream(sse.value.connectionState$, "STOPPED")
 const server = useStream(SSEEndpoint$, "", setSSEEndpoint)
 const eventType = useStream(SSEEventType$, "", setSSEEventType)
 const log = useStream(SSELog$, [], setSSELog)
