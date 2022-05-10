@@ -180,7 +180,6 @@ import {
   deleteWSProtocol,
   updateWSProtocol,
   deleteAllWSProtocols,
-  setWSConnectionState,
   addWSLogLine,
   WSLog$,
   setWSLog,
@@ -194,6 +193,7 @@ import {
   useToast,
   useNuxt,
   useStreamSubscriber,
+  useReadonlyStream,
 } from "~/helpers/utils/composables"
 import { WSConnection, WSEvent } from "~/helpers/realtime/WSConnection"
 
@@ -208,10 +208,9 @@ const protocols = useStream(WSProtocols$, [], setWSProtocols)
 
 const socket = useStream(WSSocket$, new WSConnection(), setWSSocket)
 
-const connectionState = useStream(
+const connectionState = useReadonlyStream(
   socket.value.connectionState$,
-  "DISCONNECTED",
-  setWSConnectionState
+  "DISCONNECTED"
 )
 
 const log = useStream(WSLog$, [], setWSLog)
