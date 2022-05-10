@@ -322,10 +322,7 @@ const toggleSubscription = () => {
   }
 }
 const transformToI18n = (data: string | i18nType): string => {
-  if (typeof data === "string") {
-    return data
-  } else {
-    return t(data.key, data.values).toString()
-  }
+  if (typeof data === "string") return data
+  return t(data.key, data.values).toString()
 }
 </script>
