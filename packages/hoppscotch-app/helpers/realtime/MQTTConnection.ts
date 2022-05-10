@@ -113,7 +113,7 @@ export class MQTTConnection {
       time: Date.now(),
       type: "MESSAGE_RECEIVED",
       message: {
-        key: "message_received",
+        key: "state.message_received",
         values: {
           destinationName,
           payloadString,
@@ -141,7 +141,7 @@ export class MQTTConnection {
         time: Date.now(),
         type: "MESSAGE_SENT",
         message: {
-          key: "published_message",
+          key: "state.published_message",
           values: {
             topic,
             message,
@@ -153,7 +153,7 @@ export class MQTTConnection {
         time: Date.now(),
         type: "ERROR",
         error: {
-          key: "publish_error",
+          key: "state.publish_error",
           values: {
             topic,
             message,
@@ -174,7 +174,7 @@ export class MQTTConnection {
         time: Date.now(),
         type: "ERROR",
         error: {
-          key: "mqtt_subscription_failed",
+          key: "state.mqtt_subscription_failed",
           values: {
             topic,
           },
