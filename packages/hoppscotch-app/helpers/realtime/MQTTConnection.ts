@@ -2,15 +2,19 @@ import Paho, { ConnectionOptions } from "paho-mqtt"
 import { BehaviorSubject } from "rxjs"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
 
+export type i18nType =
+  | { key: string; values: { [key: string]: string } }
+  | string
+
 export type MQTTEvent = { time: number } & (
   | { type: "CONNECTING" }
   | { type: "CONNECTED" }
-  | { type: "MESSAGE_SENT"; message: string }
+  | { type: "MESSAGE_SENT"; message: i18nType }
   | { type: "SUBSCRIBED"; topic: string }
   | { type: "SUBSCRIPTION_FAILED"; topic: string }
-  | { type: "MESSAGE_RECEIVED"; message: string }
+  | { type: "MESSAGE_RECEIVED"; message: i18nType }
   | { type: "DISCONNECTED"; manual: boolean }
-  | { type: "ERROR"; error: string }
+  | { type: "ERROR"; error: i18nType }
 )
 
 export type ConnectionState = "CONNECTING" | "CONNECTED" | "DISCONNECTED"
@@ -110,7 +114,13 @@ export class MQTTConnection {
     this.addEvent({
       time: Date.now(),
       type: "MESSAGE_RECEIVED",
-      message: `Message: ${payloadString} arrived on topic: ${destinationName}`,
+      message: {
+        key: "message_received",
+        values: {
+          destinationName,
+          payloadString,
+        },
+      },
     })
   }
 
@@ -132,13 +142,25 @@ export class MQTTConnection {
       this.addEvent({
         time: Date.now(),
         type: "MESSAGE_SENT",
-        message: `Published message: ${message} to topic: ${topic}`,
+        message: {
+          key: "published_message",
+          values: {
+            topic,
+            message,
+          },
+        },
       })
     } catch (e) {
       this.addEvent({
         time: Date.now(),
         type: "ERROR",
-        error: `something went wrong while publishing msg: ${topic} to topic: ${message}`,
+        error: {
+          key: "publish_error",
+          values: {
+            topic,
+            message,
+          },
+        },
       })
     }
   }
@@ -153,7 +175,12 @@ export class MQTTConnection {
       this.addEvent({
         time: Date.now(),
         type: "ERROR",
-        error: `something went wrong while subscribing to topic:  ${topic}`,
+        error: {
+          key: "mqtt_subscription_failed",
+          values: {
+            topic,
+          },
+        },
       })
     }
   }

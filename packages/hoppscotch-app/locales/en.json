@@ -526,7 +526,11 @@
     "subscribed_success": "Successfully subscribed to topic: {topic}",
     "unsubscribed_success": "Successfully unsubscribed to topic: {topic}",
     "subscribed_failed": "Failed to subscribe to topic: {topic}",
-    "unsubscribed_failed": "Failed to subscribe to topic: {topic}"
+    "unsubscribed_failed": "Failed to subscribe to topic: {topic}",
+    "published_message": "Published message: {message} to topic: {topic}",
+    "published_error": "something went wrong while publishing msg: {topic} to topic: {message}",
+    "message_received": "Message: {payloadString} arrived on topic: {destinationName}",
+    "mqtt_subscription_failed": "Something went wrong while subscribing to topic: {topic}"
   },
   "support": {
     "changelog": "Read more about latest releases",

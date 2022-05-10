@@ -155,7 +155,11 @@ import {
   useStreamSubscriber,
   useToast,
 } from "~/helpers/utils/composables"
-import { MQTTConnection, MQTTEvent } from "~/helpers/realtime/MQTTConnection"
+import {
+  i18nType,
+  MQTTConnection,
+  MQTTEvent,
+} from "~/helpers/realtime/MQTTConnection"
 
 const t = useI18n()
 const nuxt = useNuxt()
@@ -226,7 +230,7 @@ onMounted(() => {
 
       case "MESSAGE_SENT":
         addMQTTLogLine({
-          payload: event.message,
+          payload: transformToI18n(event.message),
           source: "client",
           ts: new Date().toLocaleTimeString(),
         })
@@ -234,7 +238,7 @@ onMounted(() => {
 
       case "MESSAGE_RECEIVED":
         addMQTTLogLine({
-          payload: event.message,
+          payload: transformToI18n(event.message),
           source: "server",
           ts: new Date(event.time).toLocaleTimeString(),
         })
@@ -263,8 +267,10 @@ onMounted(() => {
       case "ERROR":
         addMQTTLogLine({
           payload:
-            event.error ||
-            t("state.disconnected_from", { name: url.value }).toString(),
+            transformToI18n(event.error) ||
+            transformToI18n(
+              t("state.disconnected_from", { name: url.value }).toString()
+            ),
           source: "info",
           color: "#ff5555",
           ts: new Date(event.time).toLocaleTimeString(),
@@ -297,7 +303,6 @@ onUnmounted(() => {
 })
 
 // METHODS
-
 const toggleConnection = () => {
   // If it is connecting:
   if (connectionState.value === "DISCONNECTED") {
@@ -314,6 +319,13 @@ const toggleSubscription = () => {
     socket.value.unsubscribe(subTopic.value)
   } else {
     socket.value.subscribe(subTopic.value)
+  }
+}
+const transformToI18n = (data: string | i18nType): string => {
+  if (typeof data === "string") {
+    return data
+  } else {
+    return t(data.key, data.values).toString()
   }
 }
 </script>

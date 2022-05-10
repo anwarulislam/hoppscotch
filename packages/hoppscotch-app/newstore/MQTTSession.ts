@@ -1,9 +1,6 @@
 import { distinctUntilChanged, pluck } from "rxjs/operators"
 import DispatchingStore, { defineDispatchers } from "./DispatchingStore"
-import {
-  ConnectionState,
-  MQTTConnection,
-} from "~/helpers/realtime/MQTTConnection"
+import { MQTTConnection } from "~/helpers/realtime/MQTTConnection"
 import {
   HoppRealtimeLog,
   HoppRealtimeLogLine,
@@ -15,7 +12,6 @@ type HoppMQTTRequest = {
 
 type HoppMQTTSession = {
   request: HoppMQTTRequest
-  connectionState: ConnectionState
   subscriptionState: boolean
   log: HoppRealtimeLog
   socket: MQTTConnection
@@ -27,7 +23,6 @@ const defaultMQTTRequest: HoppMQTTRequest = {
 
 const defaultMQTTSession: HoppMQTTSession = {
   request: defaultMQTTRequest,
-  connectionState: "DISCONNECTED",
   subscriptionState: false,
   socket: new MQTTConnection(),
   log: [],
@@ -52,14 +47,6 @@ const dispatchers = defineDispatchers({
   setConn(_: HoppMQTTSession, { socket }: { socket: MQTTConnection }) {
     return {
       socket,
-    }
-  },
-  setConnectionState(
-    _: HoppMQTTSession,
-    { state }: { state: ConnectionState }
-  ) {
-    return {
-      connectionState: state,
     }
   },
   setSubscriptionState(_: HoppMQTTSession, { state }: { state: boolean }) {
@@ -104,15 +91,6 @@ export function setMQTTConn(socket: MQTTConnection) {
     dispatcher: "setConn",
     payload: {
       socket,
-    },
-  })
-}
-
-export function setMQTTConnectionState(state: ConnectionState) {
-  MQTTSessionStore.dispatch({
-    dispatcher: "setConnectionState",
-    payload: {
-      state,
     },
   })
 }
