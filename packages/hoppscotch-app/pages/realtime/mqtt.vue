@@ -139,27 +139,27 @@
             class="mb-4"
           />
         </div>
-        <div v-if="authType === 'basic'">
-          <div class="flex flex-1 border-b border-dividerLight">
-            <SmartEnvInput
-              v-model="username"
-              :placeholder="$t('authorization.username')"
-            />
-          </div>
-          <div class="flex flex-1 border-b border-dividerLight">
-            <SmartEnvInput
-              v-model="password"
-              :placeholder="$t('authorization.password')"
-            />
-          </div>
-        </div>
-        <div
-          v-if="authType === 'token'"
-          class="flex flex-1 border-b border-dividerLight"
-        >
+
+        <div v-else class="flex flex-1 border-b border-dividerLight">
           <div class="w-2/3 border-r border-dividerLight">
-            <div class="flex flex-1 border-b border-dividerLight">
-              <SmartEnvInput v-model="token" placeholder="Token" />
+            <div v-if="authType === 'basic'">
+              <div class="flex flex-1 border-b border-dividerLight">
+                <SmartEnvInput
+                  v-model="username"
+                  :placeholder="$t('authorization.username')"
+                />
+              </div>
+              <div class="flex flex-1 border-b border-dividerLight">
+                <SmartEnvInput
+                  v-model="password"
+                  :placeholder="$t('authorization.password')"
+                />
+              </div>
+            </div>
+            <div v-if="authType === 'token'">
+              <div class="flex flex-1 border-b border-dividerLight">
+                <SmartEnvInput v-model="token" placeholder="Token" />
+              </div>
             </div>
           </div>
           <div
