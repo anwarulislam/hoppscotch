@@ -515,7 +515,7 @@
   },
   "socketio": {
     "communication": "Communication",
-    "event_name": "Event Name",
+    "event_name": "Event/Topic Name",
     "events": "Events",
     "log": "Log",
     "url": "URL",
