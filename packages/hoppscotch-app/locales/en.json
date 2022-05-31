@@ -304,7 +304,8 @@
     "topic_name": "Topic Name",
     "topic_title": "Publish / Subscribe topic",
     "unsubscribe": "Unsubscribe",
-    "url": "URL"
+    "url": "URL",
+    "connection_not_authorized": "This MQTT connection does not use any authentication."
   },
   "navigation": {
     "doc": "Docs",
