@@ -288,7 +288,7 @@ const connectionState = useReadonlyStream(
   "DISCONNECTED"
 )
 const log = useStream(SIOLog$, [], setSIOLog)
-const authTypeOptions = ref<any>(null)
+const authTypeOptions = ref<HTMLElement>()
 const versionOptions = ref<any | null>(null)
 
 const isUrlValid = ref(true)
