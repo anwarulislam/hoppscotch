@@ -156,6 +156,7 @@
     "body": "This request does not have a body",
     "collection": "Collection is empty",
     "collections": "Collections are empty",
+    "subscription": "Subscriptions are empty",
     "documentation": "Connect to a GraphQL endpoint to view documentation",
     "endpoint": "Endpoint cannot be empty",
     "environments": "Environments are empty",
@@ -295,6 +296,8 @@
     "import_export": "Import / Export"
   },
   "mqtt": {
+    "new": "New Subscription",
+    "invalid_topic": "Please provide a topic for the subscription",
     "communication": "Communication",
     "log": "Log",
     "message": "Message",
@@ -498,13 +501,13 @@
       "title": "Theme"
     }
   },
-  "shortcodes":{
-    "actions":"Actions",
+  "shortcodes": {
+    "actions": "Actions",
     "created_on": "Created on",
-    "deleted" : "Shortcode deleted",
+    "deleted": "Shortcode deleted",
     "method": "Method",
-    "not_found":"Shortcode not found",
-    "short_code":"Short code",
+    "not_found": "Shortcode not found",
+    "short_code": "Short code",
     "url": "URL"
   },
   "show": {

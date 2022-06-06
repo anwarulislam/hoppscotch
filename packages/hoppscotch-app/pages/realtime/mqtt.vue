@@ -12,7 +12,7 @@
             autocomplete="off"
             spellcheck="false"
             class="w-full px-4 py-2 border rounded bg-primaryLight border-divider text-secondaryDark"
-            :placeholder="$t('mqtt.url')"
+            :placeholder="t('mqtt.url')"
             :disabled="
               connectionState === 'CONNECTED' ||
               connectionState === 'CONNECTING'
@@ -160,13 +160,13 @@
                 <div class="flex flex-1 border-b border-dividerLight">
                   <SmartEnvInput
                     v-model="username"
-                    :placeholder="$t('authorization.username')"
+                    :placeholder="t('authorization.username')"
                   />
                 </div>
                 <div class="flex flex-1 border-b border-dividerLight">
                   <SmartEnvInput
                     v-model="password"
-                    :placeholder="$t('authorization.password')"
+                    :placeholder="t('authorization.password')"
                   />
                 </div>
               </div>
@@ -197,38 +197,61 @@
     </template>
     <template #secondary>
       <RealtimeLog
-        :title="$t('mqtt.log')"
+        :title="t('mqtt.log')"
         :log="log"
         @delete="clearLogEntries()"
       />
     </template>
     <template #sidebar>
-      <div class="flex items-center justify-between p-4">
-        <label for="subTopic" class="font-semibold text-secondaryLight">
-          {{ $t("mqtt.topic") }}
-        </label>
+      <div
+        class="sticky z-10 flex flex-col border-b rounded-t divide-y divide-dividerLight bg-primary border-dividerLight"
+      >
+        <div class="flex justify-between flex-1">
+          <ButtonSecondary
+            svg="plus"
+            :label="t('mqtt.new')"
+            class="!rounded-none"
+            @click.native="showSubscriptionModal(true)"
+          />
+          <span class="flex">
+            <ButtonSecondary
+              v-tippy="{ theme: 'tooltip' }"
+              to="https://docs.hoppscotch.io/features/mqtt"
+              blank
+              :title="t('app.wiki')"
+              svg="help-circle"
+            />
+          </span>
+        </div>
       </div>
-      <div class="flex px-4 space-x-2">
-        <input
-          id="subTopic"
-          v-model="subTopic"
-          type="text"
-          autocomplete="off"
-          :placeholder="$t('mqtt.topic_name')"
-          spellcheck="false"
-          class="input"
+
+      <div
+        v-if="subscriptions.length === 0"
+        class="flex flex-col items-center justify-center p-4 text-secondaryLight"
+      >
+        <img
+          :src="`/images/states/${$colorMode.value}/pack.svg`"
+          loading="lazy"
+          class="inline-flex flex-col object-contain object-center w-16 h-16 my-4"
+          :alt="t('empty.subscription')"
         />
-        <ButtonPrimary
-          id="subscribe"
-          name="get"
-          :disabled="!canSubscribe"
-          :label="
-            subscriptionState ? $t('mqtt.unsubscribe') : $t('mqtt.subscribe')
-          "
-          reverse
-          @click.native="toggleSubscription"
+        <span class="pb-4 text-center">
+          {{ t("empty.subscription") }}
+        </span>
+        <ButtonSecondary
+          :label="t('mqtt.new')"
+          filled
+          @click.native="showSubscriptionModal(true)"
         />
       </div>
+
+      <RealtimeSubscription
+        :show="subscriptionModal"
+        :loading-state="false"
+        :can-subscribe="canSubscribe"
+        @submit="subscribeToTopic"
+        @hide-modal="showSubscriptionModal(false)"
+      />
     </template>
   </AppPaneLayout>
 </template>
@@ -297,9 +320,15 @@ const token = ref("")
 
 let worker: Worker
 
+const subscriptionModal = ref(false)
 const canSubscribe = computed(
   () => subTopic.value !== "" && connectionState.value === "CONNECTED"
 )
+const subscriptions = ref<string[]>([])
+
+const showSubscriptionModal = (show: boolean) => {
+  subscriptionModal.value = show
+}
 
 const workerResponseHandler = ({
   data,
@@ -422,12 +451,10 @@ const toggleConnection = () => {
 const publish = (event: { message: string; eventName: string }) => {
   socket.value?.publish(event.eventName, event.message)
 }
-const toggleSubscription = () => {
-  if (subscriptionState.value) {
-    socket.value.unsubscribe(subTopic.value)
-  } else {
-    socket.value.subscribe(subTopic.value)
-  }
+
+const subscribeToTopic = (topic: string) => {
+  subscriptions.value.push(topic)
+  console.log(topic)
 }
 
 const getI18nError = (error: MQTTError): string => {
