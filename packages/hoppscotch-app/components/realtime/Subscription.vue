@@ -67,6 +67,7 @@ const addNewSubscription = () => {
     return
   }
   emit("submit", name.value)
+  hideModal()
 }
 const hideModal = () => {
   name.value = ""

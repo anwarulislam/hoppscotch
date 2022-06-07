@@ -157,7 +157,10 @@
           </div>
           <div v-if="authType === 'token'">
             <div class="flex flex-1 border-b border-dividerLight">
-              <SmartEnvInput v-model="token" placeholder="Token" />
+              <SmartEnvInput
+                v-model="token"
+                :placeholder="t('authorization.token')"
+              />
             </div>
           </div>
         </div>
