@@ -242,6 +242,32 @@
         />
       </div>
 
+      <div v-else>
+        <div
+          v-for="(subscription, index) in subscriptions"
+          :key="`subscription-${index}`"
+          class="flex flex-col"
+        >
+          <div class="flex items-stretch group">
+            <span class="flex items-center justify-center px-4 cursor-pointer">
+              <SmartIcon
+                class="svg-icons"
+                name="square"
+                :style="{
+                  fill: subscription.color,
+                  color: subscription.color,
+                }"
+              />
+            </span>
+            <span
+              class="flex flex-1 min-w-0 py-2 pr-2 cursor-pointer transition group-hover:text-secondaryDark"
+            >
+              <span class="truncate"> {{ subscription.topic }} </span>
+            </span>
+          </div>
+        </div>
+      </div>
+
       <RealtimeSubscription
         :show="subscriptionModal"
         :loading-state="false"
@@ -317,11 +343,25 @@ const token = ref("")
 
 let worker: Worker
 
+const colors = [
+  "#f58290",
+  "#00c0a5",
+  "#6776e8",
+  "#e2c31d",
+  "#189bfe",
+  "#c778f5",
+  "#bd28bd",
+  "#e87936",
+  "#486bed",
+  "#1fc84d",
+  "#0052cc",
+  "#866dff",
+] as const
 const subscriptionModal = ref(false)
 const canSubscribe = computed(
   () => subTopic.value !== "" && connectionState.value === "CONNECTED"
 )
-const subscriptions = ref<string[]>([])
+const subscriptions = ref<{ color: string; topic: string }[]>([])
 
 const showSubscriptionModal = (show: boolean) => {
   subscriptionModal.value = show
@@ -450,7 +490,10 @@ const publish = (event: { message: string; eventName: string }) => {
 }
 
 const subscribeToTopic = (topic: string) => {
-  subscriptions.value.push(topic)
+  subscriptions.value.push({
+    topic,
+    color: colors[subscriptions.value.length % colors.length],
+  })
   console.log(topic)
 }
 
