@@ -267,6 +267,15 @@
             >
               <span class="truncate"> {{ subscription.topic }} </span>
             </span>
+            <ButtonSecondary
+              v-tippy="{ theme: 'tooltip' }"
+              svg="trash"
+              color="red"
+              :title="t('mqtt.unsubscribe')"
+              class="hidden group-hover:inline-flex"
+              data-testid="unsubscribe_mqtt_subscription"
+              @click.native="unsubscribeFromTopic(subscription.topic)"
+            />
           </div>
         </div>
       </div>
@@ -497,6 +506,11 @@ const subscribeToTopic = (topic: string) => {
     topic,
     color: colors[subscriptions.value.length % colors.length],
   })
+  console.log(topic)
+}
+
+const unsubscribeFromTopic = (topic: string) => {
+  subscriptions.value = subscriptions.value.filter((sub) => sub.topic !== topic)
   console.log(topic)
 }
 
