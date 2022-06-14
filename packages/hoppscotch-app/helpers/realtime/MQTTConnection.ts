@@ -24,6 +24,7 @@ export type MQTTEvent = { time: number } & (
 export type ConnectionState = "CONNECTING" | "CONNECTED" | "DISCONNECTED"
 
 export class MQTTConnection {
+  subscribing$ = new BehaviorSubject(false)
   subscriptionState$ = new BehaviorSubject<boolean>(false)
   connectionState$ = new BehaviorSubject<ConnectionState>("DISCONNECTED")
   event$: Subject<MQTTEvent> = new Subject()
@@ -171,12 +172,14 @@ export class MQTTConnection {
   }
 
   subscribe(topic: string) {
+    this.subscribing$.next(true)
     try {
       this.mqttClient?.subscribe(topic, {
         onSuccess: this.usubSuccess.bind(this, topic),
         onFailure: this.usubFailure.bind(this, topic),
       })
     } catch (e) {
+      this.subscribing$.next(false)
       this.addEvent({
         time: Date.now(),
         type: "ERROR",
@@ -189,6 +192,7 @@ export class MQTTConnection {
   }
 
   usubSuccess(topic: string) {
+    this.subscribing$.next(false)
     this.subscriptionState$.next(!this.subscriptionState$.value)
     this.addEvent({
       time: Date.now(),
@@ -198,6 +202,7 @@ export class MQTTConnection {
   }
 
   usubFailure(topic: string) {
+    this.subscribing$.next(false)
     this.addEvent({
       time: Date.now(),
       type: "ERROR",
