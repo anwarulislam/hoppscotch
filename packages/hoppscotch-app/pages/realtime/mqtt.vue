@@ -238,7 +238,16 @@
               <RealtimeCommunication
                 :show-event-field="index === 0"
                 :is-connected="connectionState === 'CONNECTED'"
-                @send-message="publish($event)"
+                @send-message="
+                  publish(
+                    index === 0
+                      ? $event
+                      : {
+                          message: $event.message,
+                          eventName: tab.name,
+                        }
+                  )
+                "
               />
             </div>
           </div>
