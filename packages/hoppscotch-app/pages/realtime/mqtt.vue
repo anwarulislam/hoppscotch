@@ -200,14 +200,14 @@
               <button
                 v-for="tab in tabs"
                 :key="`tab-${tab.id}`"
-                :class="[{ active: active(tab.id) }, 'tab']"
+                :class="[{ active: isActiveTab(tab.id) }, 'tab']"
                 @click="changeTab(tab.id)"
               >
                 <span class="truncate">{{ tab.name }}</span>
                 <ButtonSecondary
                   v-if="tab.removable"
                   svg="x"
-                  :class="[{ active: active(tab.id) }, 'close']"
+                  :class="[{ active: isActiveTab(tab.id) }, 'close']"
                   class="rounded my-0.5 mr-0.5 ml-4 !p-1"
                   @click.native.stop="closeTab(tab.id)"
                 />
@@ -227,7 +227,7 @@
           <div
             v-for="(tab, index) in tabs"
             :key="`subscription-${tab.id}`"
-            :class="[{ active: active(tab.id) }, 'tab-content !px-0']"
+            :class="[{ active: isActiveTab(tab.id) }, 'tab-content !px-0']"
           >
             <div class="w-full flex flex-col">
               <RealtimeLog
@@ -293,7 +293,7 @@
 
       <div v-else>
         <div
-          v-for="(subscription, index) in subscriptions"
+          v-for="(sub, index) in subscriptions"
           :key="`subscription-${index}`"
           class="flex flex-col"
         >
@@ -303,15 +303,18 @@
                 class="svg-icons"
                 name="square"
                 :style="{
-                  fill: subscription.color,
-                  color: subscription.color,
+                  fill: sub.color,
+                  color: sub.color,
                 }"
               />
             </span>
             <span
               class="flex flex-1 min-w-0 py-2 pr-2 cursor-pointer transition group-hover:text-secondaryDark"
+              @click="addTab(sub.topic)"
             >
-              <span class="truncate"> {{ subscription.topic }} </span>
+              <span class="truncate">
+                {{ sub.topic }}
+              </span>
             </span>
             <ButtonSecondary
               v-tippy="{ theme: 'tooltip' }"
@@ -320,7 +323,7 @@
               :title="t('mqtt.unsubscribe')"
               class="hidden group-hover:inline-flex"
               data-testid="unsubscribe_mqtt_subscription"
-              @click.native="unsubscribeFromTopic(subscription.topic)"
+              @click.native="unsubscribeFromTopic(sub.topic)"
             />
           </div>
         </div>
@@ -570,11 +573,10 @@ const clearLogEntries = () => {
   log.value = []
 }
 
-const currentTabId = ref(0)
-const nextTabId = ref(1)
+const currentTabId = ref("all")
 const tabs = ref([
   {
-    id: 0,
+    id: "all",
     name: "All Topics",
     removable: false,
   },
@@ -595,23 +597,25 @@ const tabsWidth = computed(() => ({
   transition: "max-width 0.2s",
 }))
 
-const active = (id: number) => id === currentTabId.value
-
-const changeTab = (id: number) => {
+const isActiveTab = (id: string) => id === currentTabId.value
+const changeTab = (id: string) => {
   currentTabId.value = id
 }
 
-const addTab = () => {
+const addTab = (topic: string) => {
+  if (tabs.value.some((tab) => tab.id === topic)) {
+    return (currentTabId.value = topic)
+  }
+
   tabs.value.push({
-    id: nextTabId.value,
-    name: "Untitled request",
+    id: topic,
+    name: topic,
     removable: true,
   })
-  currentTabId.value = nextTabId.value
-  nextTabId.value++
+  currentTabId.value = topic
 }
 
-const closeTab = (id: number) => {
+const closeTab = (id: string) => {
   const index = tabs.value.findIndex((tab) => tab.id === id)
   tabs.value.splice(index, 1)
   if (currentTabId.value === id) {

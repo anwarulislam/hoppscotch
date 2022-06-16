@@ -134,6 +134,7 @@ export class MQTTConnection {
     }
     this.manualDisconnect = false
     this.subscriptionState$.next(false)
+    this.subscribedTopics$.next([])
   }
 
   onMessageArrived({
