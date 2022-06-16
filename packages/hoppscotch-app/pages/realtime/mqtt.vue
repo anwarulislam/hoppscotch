@@ -182,9 +182,9 @@
       </div>
     </template>
     <template #secondary>
-      <div class="flex flex-col hide-scrollbar !overflow-auto">
+      <div class="h-full flex flex-col hide-scrollbar !overflow-auto">
         <div
-          class="relative sticky top-0 inline-flex flex-1 w-full divide-divider divide-x bg-primaryLight"
+          class="relative sticky top-0 inline-flex w-full divide-divider divide-x bg-primaryLight"
         >
           <draggable
             v-bind="dragOptions"
@@ -205,6 +205,7 @@
               >
                 <span class="truncate">{{ tab.name }}</span>
                 <ButtonSecondary
+                  v-if="tab.removable"
                   svg="x"
                   :class="[{ active: active(tab.id) }, 'close']"
                   class="rounded my-0.5 mr-0.5 ml-4 !p-1"
@@ -221,26 +222,31 @@
             />
           </span>
         </div>
+
+        <div v-if="tabs.length">
+          <div
+            v-for="(tab, index) in tabs"
+            :key="`subscription-${tab.id}`"
+            :class="[{ active: active(tab.id) }, 'tab-content !px-0']"
+          >
+            <div class="w-full flex flex-col">
+              <RealtimeLog
+                :title="t('mqtt.log')"
+                :log="log"
+                @delete="clearLogEntries()"
+              />
+              <RealtimeCommunication
+                :show-event-field="index === 0"
+                :is-connected="connectionState === 'CONNECTED'"
+                @send-message="publish($event)"
+              />
+            </div>
+          </div>
+        </div>
+        <div v-else>
+          <div class="empty-tab-content">Empty</div>
+        </div>
       </div>
-      <SmartTabs
-        v-model="selectedTab"
-        styles="sticky bg-primary z-10 top-0 border-b border-dividerLight pb-2 pt-1"
-      >
-        <SmartTab :id="'logs'" :label="`${t('websocket.log')}`">
-          <RealtimeLog
-            :title="t('mqtt.log')"
-            :log="log"
-            @delete="clearLogEntries()"
-          />
-        </SmartTab>
-        <SmartTab :id="'communication'" :label="`Topic 1`">
-          <RealtimeCommunication
-            :show-event-field="false"
-            :is-connected="connectionState === 'CONNECTED'"
-            @send-message="publish($event)"
-          />
-        </SmartTab>
-      </SmartTabs>
     </template>
     <template #sidebar>
       <div
@@ -322,8 +328,7 @@
 
       <RealtimeSubscription
         :show="subscriptionModal"
-        :loading-state="false"
-        :can-subscribe="canSubscribe"
+        :loading-state="subscribing"
         @submit="subscribeToTopic"
         @hide-modal="showSubscriptionModal(false)"
       />
@@ -376,9 +381,7 @@ const subscriptionState = useReadonlyStream(
   socket.value.subscriptionState$,
   false
 )
-
-type MQTTTab = "communication" | "authorization"
-const selectedTab = ref<MQTTTab>("communication")
+const subscribing = useReadonlyStream(socket.value.subscribing$, false)
 
 const isUrlValid = ref(true)
 const subTopic = ref("")
@@ -476,10 +479,15 @@ onMounted(() => {
         break
 
       case "SUBSCRIBED":
+        subscriptions.value.push({
+          topic: event.topic,
+          color: colors[subscriptions.value.length % colors.length],
+        })
+        showSubscriptionModal(false)
         addMQTTLogLine({
           payload: subscriptionState.value
-            ? `${t("state.subscribed_success", { topic: subTopic.value })}`
-            : `${t("state.unsubscribed_success", { topic: subTopic.value })}`,
+            ? `${t("state.subscribed_success", { topic: event.topic })}`
+            : `${t("state.unsubscribed_success", { topic: event.topic })}`,
           source: "server",
           ts: event.time,
         })
@@ -543,10 +551,12 @@ const publish = (event: { message: string; eventName: string }) => {
 }
 
 const subscribeToTopic = (topic: string) => {
-  subscriptions.value.push({
-    topic,
-    color: colors[subscriptions.value.length % colors.length],
-  })
+  if (canSubscribe.value) {
+    socket.value.subscribe(topic)
+  } else {
+    subscriptionModal.value = false
+    toast.error(`${t("mqtt.not_connected")}`)
+  }
   console.log(topic)
 }
 
@@ -584,7 +594,8 @@ const nextTabId = ref(1)
 const tabs = ref([
   {
     id: 0,
-    name: "Untitled request",
+    name: "All Topics",
+    removable: false,
   },
 ])
 
@@ -613,6 +624,7 @@ const addTab = () => {
   tabs.value.push({
     id: nextTabId.value,
     name: "Untitled request",
+    removable: true,
   })
   currentTabId.value = nextTabId.value
   nextTabId.value++

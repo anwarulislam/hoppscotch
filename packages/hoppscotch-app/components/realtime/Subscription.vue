@@ -49,10 +49,6 @@ defineProps({
     type: Boolean,
     default: false,
   },
-  canSubscribe: {
-    type: Boolean,
-    default: false,
-  },
 })
 
 const emit = defineEmits<{
@@ -67,7 +63,6 @@ const addNewSubscription = () => {
     return
   }
   emit("submit", name.value)
-  hideModal()
 }
 const hideModal = () => {
   name.value = ""
