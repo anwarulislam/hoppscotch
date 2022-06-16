@@ -1,5 +1,5 @@
 import Paho, { ConnectionOptions } from "paho-mqtt"
-import { BehaviorSubject, Subject } from "rxjs"
+import { BehaviorSubject, Observable, Subject } from "rxjs"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
 
 export type MQTTMessage = { topic: string; message: string }
@@ -21,6 +21,26 @@ export type MQTTEvent = { time: number } & (
   | { type: "ERROR"; error: MQTTError }
 )
 
+export const colors = [
+  "#f58290",
+  "#00c0a5",
+  "#6776e8",
+  "#e2c31d",
+  "#189bfe",
+  "#c778f5",
+  "#bd28bd",
+  "#e87936",
+  "#486bed",
+  "#1fc84d",
+  "#0052cc",
+  "#866dff",
+]
+
+export type MQTTSubscription = {
+  topic: string
+  color: string
+}
+
 export type ConnectionState = "CONNECTING" | "CONNECTED" | "DISCONNECTED"
 
 export class MQTTConnection {
@@ -28,6 +48,7 @@ export class MQTTConnection {
   subscriptionState$ = new BehaviorSubject<boolean>(false)
   connectionState$ = new BehaviorSubject<ConnectionState>("DISCONNECTED")
   event$: Subject<MQTTEvent> = new Subject()
+  subscribedTopics$ = new BehaviorSubject<MQTTSubscription[]>([])
 
   private mqttClient: Paho.Client | undefined
   private manualDisconnect = false
@@ -175,7 +196,7 @@ export class MQTTConnection {
     this.subscribing$.next(true)
     try {
       this.mqttClient?.subscribe(topic, {
-        onSuccess: this.usubSuccess.bind(this, topic),
+        onSuccess: this.subSuccess.bind(this, topic),
         onFailure: this.usubFailure.bind(this, topic),
       })
     } catch (e) {
@@ -191,14 +212,20 @@ export class MQTTConnection {
     }
   }
 
-  usubSuccess(topic: string) {
+  subSuccess(topic: string) {
     this.subscribing$.next(false)
     this.subscriptionState$.next(!this.subscriptionState$.value)
+    this.addSubscription(topic)
     this.addEvent({
       time: Date.now(),
       type: "SUBSCRIBED",
       topic,
     })
+  }
+
+  usubSuccess(topic: string) {
+    this.subscribing$.next(false)
+    this.removeSubscription(topic)
   }
 
   usubFailure(topic: string) {
@@ -218,6 +245,23 @@ export class MQTTConnection {
       onSuccess: this.usubSuccess.bind(this, topic),
       onFailure: this.usubFailure.bind(this, topic),
     })
+  }
+
+  get subscribedTopics() {
+    return this.subscribedTopics$ as Observable<MQTTSubscription[]>
+  }
+
+  addSubscription(topic: string) {
+    const subscriptions = [...this.subscribedTopics$.value]
+    this.subscribedTopics$.next([
+      ...subscriptions,
+      { topic, color: colors[subscriptions.length % colors.length] },
+    ])
+  }
+
+  removeSubscription(topic: string) {
+    const subscriptions = [...this.subscribedTopics$.value]
+    this.subscribedTopics$.next(subscriptions.filter((t) => t.topic !== topic))
   }
 
   disconnect() {

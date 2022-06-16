@@ -12,7 +12,7 @@
             autocomplete="off"
             spellcheck="false"
             class="w-full px-4 py-2 border rounded bg-primaryLight border-divider text-secondaryDark"
-            :placeholder="t('mqtt.url')"
+            :placeholder="`${t('mqtt.url')}`"
             :disabled="
               connectionState === 'CONNECTED' ||
               connectionState === 'CONNECTING'
@@ -279,7 +279,7 @@
           :src="`/images/states/${$colorMode.value}/pack.svg`"
           loading="lazy"
           class="inline-flex flex-col object-contain object-center w-16 h-16 my-4"
-          :alt="t('empty.subscription')"
+          :alt="`${t('empty.subscription')}`"
         />
         <span class="pb-4 text-center">
           {{ t("empty.subscription") }}
@@ -399,25 +399,9 @@ const token = ref("")
 
 let worker: Worker
 
-const colors = [
-  "#f58290",
-  "#00c0a5",
-  "#6776e8",
-  "#e2c31d",
-  "#189bfe",
-  "#c778f5",
-  "#bd28bd",
-  "#e87936",
-  "#486bed",
-  "#1fc84d",
-  "#0052cc",
-  "#866dff",
-] as const
 const subscriptionModal = ref(false)
-const canSubscribe = computed(
-  () => subTopic.value !== "" && connectionState.value === "CONNECTED"
-)
-const subscriptions = ref<{ color: string; topic: string }[]>([])
+const canSubscribe = computed(() => connectionState.value === "CONNECTED")
+const subscriptions = useReadonlyStream(socket.value.subscribedTopics$, [])
 
 const showSubscriptionModal = (show: boolean) => {
   subscriptionModal.value = show
@@ -479,10 +463,6 @@ onMounted(() => {
         break
 
       case "SUBSCRIBED":
-        subscriptions.value.push({
-          topic: event.topic,
-          color: colors[subscriptions.value.length % colors.length],
-        })
         showSubscriptionModal(false)
         addMQTTLogLine({
           payload: subscriptionState.value
@@ -552,17 +532,18 @@ const publish = (event: { message: string; eventName: string }) => {
 
 const subscribeToTopic = (topic: string) => {
   if (canSubscribe.value) {
+    if (subscriptions.value.some((sub) => sub.topic === topic)) {
+      return toast.error(t("mqtt.already_subscribed").toString())
+    }
     socket.value.subscribe(topic)
   } else {
     subscriptionModal.value = false
-    toast.error(`${t("mqtt.not_connected")}`)
+    toast.error(t("mqtt.not_connected").toString())
   }
-  console.log(topic)
 }
 
 const unsubscribeFromTopic = (topic: string) => {
-  subscriptions.value = subscriptions.value.filter((sub) => sub.topic !== topic)
-  console.log(topic)
+  socket.value.unsubscribe(topic)
 }
 
 const getI18nError = (error: MQTTError): string => {
