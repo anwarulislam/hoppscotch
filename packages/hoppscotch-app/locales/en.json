@@ -309,7 +309,8 @@
     "unsubscribe": "Unsubscribe",
     "url": "URL",
     "connection_not_authorized": "This MQTT connection does not use any authentication.",
-    "not_connected": "Please start a MQTT connection first."
+    "not_connected": "Please start a MQTT connection first.",
+    "already_subscribed": "You are already subscribed to this topic."
   },
   "navigation": {
     "doc": "Docs",
