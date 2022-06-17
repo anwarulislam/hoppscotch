@@ -245,7 +245,7 @@
             <div class="w-full flex flex-col">
               <RealtimeLog
                 :title="t('mqtt.log')"
-                :log="log"
+                :log="index === 0 ? logs : currentTabLogs"
                 @delete="clearLogEntries()"
               />
               <RealtimeCommunication
@@ -377,6 +377,10 @@ import {
   MQTTSubscription,
 } from "~/helpers/realtime/MQTTConnection"
 import {
+  HoppRealtimeLog,
+  HoppRealtimeLogLine,
+} from "~/helpers/types/HoppRealtimeLog"
+import {
   useI18n,
   useNuxt,
   useReadonlyStream,
@@ -400,7 +404,8 @@ const toast = useToast()
 const { subscribeToStream } = useStreamSubscriber()
 
 const url = useStream(MQTTEndpoint$, "", setMQTTEndpoint)
-const log = useStream(MQTTLog$, [], setMQTTLog)
+const logs = useStream(MQTTLog$, [], setMQTTLog)
+const currentTabLogs = ref<HoppRealtimeLog>([])
 const socket = useStream(MQTTConn$, new MQTTConnection(), setMQTTConn)
 const connectionState = useReadonlyStream(
   socket.value.connectionState$,
@@ -451,7 +456,7 @@ onMounted(() => {
   subscribeToStream(socket.value.event$, (event) => {
     switch (event?.type) {
       case "CONNECTING":
-        log.value = [
+        logs.value = [
           {
             payload: `${t("state.connecting_to", { name: url.value })}`,
             source: "info",
@@ -462,7 +467,7 @@ onMounted(() => {
         break
 
       case "CONNECTED":
-        log.value = [
+        logs.value = [
           {
             payload: `${t("state.connected_to", { name: url.value })}`,
             source: "info",
@@ -474,7 +479,7 @@ onMounted(() => {
         break
 
       case "MESSAGE_SENT":
-        addMQTTLogLine({
+        addLog({
           prefix: `${event.message.topic}`,
           payload: event.message.message,
           source: "client",
@@ -483,7 +488,7 @@ onMounted(() => {
         break
 
       case "MESSAGE_RECEIVED":
-        addMQTTLogLine({
+        addLog({
           prefix: `${event.message.topic}`,
           payload: event.message.message,
           source: "server",
@@ -533,6 +538,13 @@ onMounted(() => {
     }
   })
 })
+
+const addLog = (line: HoppRealtimeLogLine) => {
+  if (currentTabId.value !== "all") {
+    currentTabLogs.value.push(line)
+  }
+  addMQTTLogLine(line)
+}
 
 const debouncer = debounce(function () {
   worker.postMessage({ type: "ws", url: url.value })
@@ -596,7 +608,7 @@ const getI18nError = (error: MQTTError): string => {
   }
 }
 const clearLogEntries = () => {
-  log.value = []
+  logs.value = []
 }
 
 const currentTabId = ref("all")
@@ -626,12 +638,17 @@ const tabsWidth = computed(() => ({
 const isActiveTab = (id: string) => id === currentTabId.value
 const changeTab = (id: string) => {
   currentTabId.value = id
+  if (currentTabId.value !== "all") {
+    currentTabLogs.value = logs.value.filter((log) => {
+      return log.prefix?.includes(id)
+    })
+  }
 }
 
 const addTab = (subscription: MQTTSubscription) => {
   const { topic, color } = subscription
   if (tabs.value.some((tab) => tab.id === topic)) {
-    return (currentTabId.value = topic)
+    changeTab(topic)
   }
 
   tabs.value.push({
@@ -640,7 +657,7 @@ const addTab = (subscription: MQTTSubscription) => {
     color,
     removable: true,
   })
-  currentTabId.value = topic
+  changeTab(topic)
 }
 
 const closeTab = (id: string) => {
