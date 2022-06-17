@@ -203,10 +203,30 @@
                 :class="[{ active: isActiveTab(tab.id) }, 'tab']"
                 @click="changeTab(tab.id)"
               >
-                <span class="truncate">{{ tab.name }}</span>
+                <div class="flex items-stretch group">
+                  <span
+                    class="flex items-center justify-center px-4 cursor-pointer"
+                  >
+                    <SmartIcon
+                      class="svg-icons"
+                      name="square"
+                      :style="{
+                        fill: tab.color,
+                        color: tab.color,
+                      }"
+                    />
+                  </span>
+                  <span class="truncate">
+                    {{ tab.name }}
+                  </span>
+                </div>
+
+                <!-- <span class="p-1 truncate">{{ tab.name }}</span> -->
                 <ButtonSecondary
-                  v-if="tab.removable"
                   svg="x"
+                  :style="{
+                    visibility: tab.removable ? 'visible' : 'hidden',
+                  }"
                   :class="[{ active: isActiveTab(tab.id) }, 'close']"
                   class="rounded my-0.5 mr-0.5 ml-4 !p-1"
                   @click.native.stop="closeTab(tab.id)"
@@ -214,13 +234,6 @@
               </button>
             </transition-group>
           </draggable>
-          <span class="flex items-center justify-center p-1 bg-primaryLight">
-            <ButtonSecondary
-              svg="plus"
-              class="sticky right-0 rounded"
-              @click.native="addTab"
-            />
-          </span>
         </div>
 
         <div v-if="tabs.length">
@@ -319,7 +332,7 @@
             </span>
             <span
               class="flex flex-1 min-w-0 py-2 pr-2 cursor-pointer transition group-hover:text-secondaryDark"
-              @click="addTab(sub.topic)"
+              @click="addTab(sub)"
             >
               <span class="truncate">
                 {{ sub.topic }}
@@ -358,7 +371,11 @@ import {
 } from "@nuxtjs/composition-api"
 import debounce from "lodash/debounce"
 import draggable from "vuedraggable"
-import { MQTTConnection, MQTTError } from "~/helpers/realtime/MQTTConnection"
+import {
+  MQTTConnection,
+  MQTTError,
+  MQTTSubscription,
+} from "~/helpers/realtime/MQTTConnection"
 import {
   useI18n,
   useNuxt,
@@ -583,13 +600,13 @@ const clearLogEntries = () => {
 }
 
 const currentTabId = ref("all")
-const tabs = ref([
-  {
-    id: "all",
-    name: "All Topics",
-    removable: false,
-  },
-])
+const defaultTab = {
+  id: "all",
+  name: "All Topics",
+  color: "var(--accent-color)",
+  removable: false,
+}
+const tabs = ref([defaultTab])
 
 const dragOptions = computed(() => ({
   group: "tabs",
@@ -611,7 +628,8 @@ const changeTab = (id: string) => {
   currentTabId.value = id
 }
 
-const addTab = (topic: string) => {
+const addTab = (subscription: MQTTSubscription) => {
+  const { topic, color } = subscription
   if (tabs.value.some((tab) => tab.id === topic)) {
     return (currentTabId.value = topic)
   }
@@ -619,6 +637,7 @@ const addTab = (topic: string) => {
   tabs.value.push({
     id: topic,
     name: topic,
+    color,
     removable: true,
   })
   currentTabId.value = topic
