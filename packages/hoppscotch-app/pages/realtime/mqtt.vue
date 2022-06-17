@@ -421,7 +421,7 @@ const isUrlValid = ref(true)
 const subTopic = ref("")
 
 // Authorization
-const authTypeOptions = ref<HTMLElement>()
+const authTypeOptions = ref<HTMLElement | any>()
 const authType = ref<"none" | "basic" | "token">("none")
 
 // Basic Auth
@@ -664,8 +664,7 @@ const closeTab = (id: string) => {
   const index = tabs.value.findIndex((tab) => tab.id === id)
   tabs.value.splice(index, 1)
   if (currentTabId.value === id) {
-    if (tabs.value[index]?.id) currentTabId.value = tabs.value[index]?.id
-    else currentTabId.value = tabs.value[tabs.value.length - 1]?.id
+    changeTab(tabs.value[index]?.id || tabs.value[tabs.value.length - 1]?.id)
   }
 }
 </script>
