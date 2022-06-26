@@ -37,65 +37,15 @@
       <RealtimeAuthorization />
     </template>
     <template #secondary>
-      <div class="h-full flex flex-col hide-scrollbar !overflow-auto">
-        <div
-          class="relative sticky top-0 inline-flex w-full divide-divider divide-x bg-primaryLight"
-        >
-          <draggable
-            v-bind="dragOptions"
-            :list="tabs"
-            :style="tabsWidth"
-            class="flex overflow-x-auto transition hide-scrollbar"
-          >
-            <transition-group
-              class="flex divide-primaryDark divide-x"
-              name="fade"
-              appear
-            >
-              <button
-                v-for="tab in tabs"
-                :key="`tab-${tab.id}`"
-                :class="[{ active: isActiveTab(tab.id) }, 'tab']"
-                @click="changeTab(tab.id)"
-              >
-                <div class="flex items-stretch group">
-                  <span
-                    class="flex items-center justify-center px-4 cursor-pointer"
-                  >
-                    <SmartIcon
-                      class="svg-icons"
-                      name="square"
-                      :style="{
-                        fill: tab.color,
-                        color: tab.color,
-                      }"
-                    />
-                  </span>
-                  <span class="truncate">
-                    {{ tab.name }}
-                  </span>
-                </div>
-
-                <!-- <span class="p-1 truncate">{{ tab.name }}</span> -->
-                <ButtonSecondary
-                  svg="x"
-                  :style="{
-                    visibility: tab.removable ? 'visible' : 'hidden',
-                  }"
-                  :class="[{ active: isActiveTab(tab.id) }, 'close']"
-                  class="rounded my-0.5 mr-0.5 ml-4 !p-1"
-                  @click.native.stop="closeTab(tab.id)"
-                />
-              </button>
-            </transition-group>
-          </draggable>
-        </div>
-
-        <div v-if="tabs.length">
-          <div
-            v-for="(tab, index) in tabs"
-            :key="`subscription-${tab.id}`"
-            :class="[{ active: isActiveTab(tab.id) }, 'tab-content !px-0']"
+      <SmartWindows :id="'communication_tab'" v-model="currentTabId">
+        <template v-for="(tab, index) in tabs">
+          <SmartWindow
+            :id="tab.id"
+            :key="'removable_tab_' + index"
+            :label="tab.name"
+            :is-removable="tab.removable"
+            :icon="'square'"
+            :icon-color="tab.color"
           >
             <div class="w-full flex flex-col">
               <RealtimeLog
@@ -118,12 +68,9 @@
                 "
               />
             </div>
-          </div>
-        </div>
-        <div v-else>
-          <div class="empty-tab-content">Empty</div>
-        </div>
-      </div>
+          </SmartWindow>
+        </template>
+      </SmartWindows>
     </template>
     <template #sidebar>
       <div
@@ -207,7 +154,7 @@
       </div>
 
       <RealtimeSubscription
-        :show="subscriptionModal"
+        :show="subscriptionModalShown"
         :loading-state="subscribing"
         @submit="subscribeToTopic"
         @hide-modal="showSubscriptionModal(false)"
@@ -225,7 +172,6 @@ import {
   watch,
 } from "@nuxtjs/composition-api"
 import debounce from "lodash/debounce"
-import draggable from "vuedraggable"
 import {
   MQTTConnection,
   MQTTError,
@@ -464,22 +410,6 @@ const defaultTab = {
 }
 const tabs = ref([defaultTab])
 
-const dragOptions = computed(() => ({
-  group: "tabs",
-  animation: 250,
-  handle: ".tab",
-  draggable: ".tab",
-  ghostClass: "cursor-move",
-}))
-
-const tabsWidth = computed(() => ({
-  maxWidth: `${tabs.value.length * 184}px`,
-  width: "100%",
-  minWidth: "0px",
-  transition: "max-width 0.2s",
-}))
-
-const isActiveTab = (id: string) => id === currentTabId.value
 const changeTab = (id: string) => {
   currentTabId.value = id
   if (currentTabId.value !== "all") {
@@ -504,64 +434,11 @@ const addTab = (subscription: MQTTSubscription) => {
   changeTab(topic)
 }
 
-const closeTab = (id: string) => {
-  const index = tabs.value.findIndex((tab) => tab.id === id)
-  tabs.value.splice(index, 1)
-  if (currentTabId.value === id) {
-    changeTab(tabs.value[index]?.id || tabs.value[tabs.value.length - 1]?.id)
-  }
-}
+// const closeTab = (id: string) => {
+//   const index = tabs.value.findIndex((tab) => tab.id === id)
+//   tabs.value.splice(index, 1)
+//   if (currentTabId.value === id) {
+//     changeTab(tabs.value[index]?.id || tabs.value[tabs.value.length - 1]?.id)
+//   }
+// }
 </script>
-
-<style lang="scss" scoped>
-.tab {
-  @apply relative;
-  @apply flex;
-  @apply pl-4;
-  @apply pr-1;
-  @apply py-1;
-  @apply font-semibold;
-  @apply w-46;
-  @apply transition;
-  @apply flex-1;
-  @apply items-center;
-  @apply justify-between;
-  @apply text-secondaryLight;
-  @apply hover:bg-primaryDark;
-  @apply hover:text-secondary;
-  @apply focus-visible:text-secondaryDark;
-  &::after {
-    @apply absolute;
-    @apply left-0;
-    @apply right-0;
-    @apply top-0;
-    @apply bg-transparent;
-    @apply z-2;
-    @apply h-0.5;
-    content: "";
-  }
-  &:focus::after {
-    @apply bg-divider;
-  }
-  &.active {
-    @apply text-secondaryDark;
-    @apply bg-primary;
-    &::after {
-      @apply bg-accent;
-    }
-  }
-}
-.tab-content {
-  @apply p-4;
-  @apply hidden;
-  &.active {
-    @apply flex;
-  }
-}
-.close {
-  @apply opacity-50;
-  &.active {
-    @apply opacity-100;
-  }
-}
-</style>
