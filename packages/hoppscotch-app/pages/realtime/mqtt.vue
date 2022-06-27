@@ -134,7 +134,7 @@
             </span>
             <span
               class="flex flex-1 min-w-0 py-2 pr-2 cursor-pointer transition group-hover:text-secondaryDark"
-              @click="addTab(sub)"
+              @click="openTopicAsTab(sub)"
             >
               <span class="truncate">
                 {{ sub.topic }}
@@ -419,10 +419,10 @@ const changeTab = (id: string) => {
   }
 }
 
-const addTab = (subscription: MQTTSubscription) => {
+const openTopicAsTab = (subscription: MQTTSubscription) => {
   const { topic, color } = subscription
   if (tabs.value.some((tab) => tab.id === topic)) {
-    changeTab(topic)
+    return changeTab(topic)
   }
 
   tabs.value.push({

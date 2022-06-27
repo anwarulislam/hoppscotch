@@ -1,5 +1,5 @@
 import Paho, { ConnectionOptions } from "paho-mqtt"
-import { BehaviorSubject, Observable, Subject } from "rxjs"
+import { BehaviorSubject, Subject } from "rxjs"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
 
 export type MQTTMessage = { topic: string; message: string }
@@ -248,20 +248,17 @@ export class MQTTConnection {
     })
   }
 
-  get subscribedTopics() {
-    return this.subscribedTopics$ as Observable<MQTTSubscription[]>
-  }
-
   addSubscription(topic: string) {
-    const subscriptions = [...this.subscribedTopics$.value]
-    this.subscribedTopics$.next([
-      ...subscriptions,
-      { topic, color: colors[subscriptions.length % colors.length] },
-    ])
+    const subscriptions = this.subscribedTopics$.getValue()
+    subscriptions.push({
+      topic,
+      color: colors[subscriptions.length % colors.length],
+    })
+    this.subscribedTopics$.next(subscriptions)
   }
 
   removeSubscription(topic: string) {
-    const subscriptions = [...this.subscribedTopics$.value]
+    const subscriptions = this.subscribedTopics$.getValue()
     this.subscribedTopics$.next(subscriptions.filter((t) => t.topic !== topic))
   }
 
