@@ -198,12 +198,10 @@ import {
   setMQTTEndpoint,
   setMQTTLog,
 } from "~/newstore/MQTTSession"
-
 const t = useI18n()
 const nuxt = useNuxt()
 const toast = useToast()
 const { subscribeToStream } = useStreamSubscriber()
-
 const url = useStream(MQTTEndpoint$, "", setMQTTEndpoint)
 const logs = useStream(MQTTLog$, [], setMQTTLog)
 const currentTabLogs = ref<HoppRealtimeLog>([])
@@ -217,20 +215,15 @@ const subscriptionState = useReadonlyStream(
   false
 )
 const subscribing = useReadonlyStream(socket.value.subscribing$, false)
-
 const isUrlValid = ref(true)
 const subTopic = ref("")
-
 let worker: Worker
-
 const subscriptionModalShown = ref(false)
 const canSubscribe = computed(() => connectionState.value === "CONNECTED")
 const subscriptions = useReadonlyStream(socket.value.subscribedTopics$, [])
-
 const showSubscriptionModal = (show: boolean) => {
   subscriptionModalShown.value = show
 }
-
 const workerResponseHandler = ({
   data,
 }: {
@@ -238,11 +231,9 @@ const workerResponseHandler = ({
 }) => {
   if (data.url === url.value) isUrlValid.value = data.result
 }
-
 onMounted(() => {
   worker = nuxt.value.$worker.createRejexWorker()
   worker.addEventListener("message", workerResponseHandler)
-
   subscribeToStream(socket.value.event$, (event) => {
     switch (event?.type) {
       case "CONNECTING":
@@ -255,7 +246,6 @@ onMounted(() => {
           },
         ]
         break
-
       case "CONNECTED":
         logs.value = [
           {
@@ -267,7 +257,6 @@ onMounted(() => {
         ]
         toast.success(`${t("state.connected")}`)
         break
-
       case "MESSAGE_SENT":
         addLog({
           prefix: `${event.message.topic}`,
@@ -276,7 +265,6 @@ onMounted(() => {
           ts: Date.now(),
         })
         break
-
       case "MESSAGE_RECEIVED":
         addLog({
           prefix: `${event.message.topic}`,
@@ -285,7 +273,6 @@ onMounted(() => {
           ts: event.time,
         })
         break
-
       case "SUBSCRIBED":
         showSubscriptionModal(false)
         addMQTTLogLine({
@@ -296,7 +283,6 @@ onMounted(() => {
           ts: event.time,
         })
         break
-
       case "SUBSCRIPTION_FAILED":
         addMQTTLogLine({
           payload: subscriptionState.value
@@ -306,7 +292,6 @@ onMounted(() => {
           ts: event.time,
         })
         break
-
       case "ERROR":
         addMQTTLogLine({
           payload: getI18nError(event.error),
@@ -315,7 +300,6 @@ onMounted(() => {
           ts: event.time,
         })
         break
-
       case "DISCONNECTED":
         addMQTTLogLine({
           payload: t("state.disconnected_from", { name: url.value }).toString(),
@@ -328,26 +312,21 @@ onMounted(() => {
     }
   })
 })
-
 const addLog = (line: HoppRealtimeLogLine) => {
   if (currentTabId.value !== "all") {
     currentTabLogs.value.push(line)
   }
   addMQTTLogLine(line)
 }
-
 const debouncer = debounce(function () {
   worker.postMessage({ type: "ws", url: url.value })
 }, 1000)
-
 watch(url, (newUrl) => {
   if (newUrl) debouncer()
 })
-
 onUnmounted(() => {
   worker.terminate()
 })
-
 // METHODS
 const toggleConnection = () => {
   // If it is connecting:
@@ -360,7 +339,6 @@ const toggleConnection = () => {
 const publish = (event: { message: string; eventName: string }) => {
   socket.value?.publish(event.eventName, event.message)
 }
-
 const subscribeToTopic = (topic: string) => {
   if (canSubscribe.value) {
     if (subscriptions.value.some((sub) => sub.topic === topic)) {
@@ -372,14 +350,11 @@ const subscribeToTopic = (topic: string) => {
     toast.error(t("mqtt.not_connected").toString())
   }
 }
-
 const unsubscribeFromTopic = (topic: string) => {
   socket.value.unsubscribe(topic)
 }
-
 const getI18nError = (error: MQTTError): string => {
   if (typeof error === "string") return error
-
   switch (error.type) {
     case "CONNECTION_NOT_ESTABLISHED":
       return t("state.connection_lost").toString()
@@ -400,7 +375,6 @@ const getI18nError = (error: MQTTError): string => {
 const clearLogEntries = () => {
   logs.value = []
 }
-
 const currentTabId = ref("all")
 const defaultTab = {
   id: "all",
@@ -409,7 +383,6 @@ const defaultTab = {
   removable: false,
 }
 const tabs = ref([defaultTab])
-
 const changeTab = (id: string) => {
   currentTabId.value = id
   if (currentTabId.value !== "all") {
@@ -418,13 +391,11 @@ const changeTab = (id: string) => {
     })
   }
 }
-
 const openTopicAsTab = (subscription: MQTTSubscription) => {
   const { topic, color } = subscription
   if (tabs.value.some((tab) => tab.id === topic)) {
     return changeTab(topic)
   }
-
   tabs.value.push({
     id: topic,
     name: topic,
@@ -433,7 +404,6 @@ const openTopicAsTab = (subscription: MQTTSubscription) => {
   })
   changeTab(topic)
 }
-
 // const closeTab = (id: string) => {
 //   const index = tabs.value.findIndex((tab) => tab.id === id)
 //   tabs.value.splice(index, 1)
