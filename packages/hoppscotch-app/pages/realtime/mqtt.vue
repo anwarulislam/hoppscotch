@@ -34,7 +34,7 @@
         </div>
       </div>
 
-      <RealtimeAuthorization />
+      <RealtimeConnectionConfig />
     </template>
     <template #secondary>
       <SmartWindows :id="'communication_tab'" v-model="currentTabId">
