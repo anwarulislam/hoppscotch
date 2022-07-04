@@ -12,7 +12,12 @@
       min-size="65"
       class="hide-scrollbar !overflow-auto flex flex-col"
     >
-      <Splitpanes class="smart-splitter" :horizontal="COLUMN_LAYOUT">
+      <slot v-if="!hasSecondary" name="primary" />
+      <Splitpanes
+        v-if="hasSecondary"
+        class="smart-splitter"
+        :horizontal="COLUMN_LAYOUT"
+      >
         <Pane
           :size="COLUMN_LAYOUT ? 45 : 50"
           class="hide-scrollbar !overflow-auto flex flex-col"
@@ -57,4 +62,5 @@ const SIDEBAR = useSetting("SIDEBAR")
 const slots = useSlots()
 
 const hasSidebar = computed(() => !!slots.sidebar)
+const hasSecondary = computed(() => !!slots.secondary)
 </script>
