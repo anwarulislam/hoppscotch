@@ -5,20 +5,39 @@
         class="sticky top-0 z-10 flex flex-shrink-0 p-4 overflow-x-auto space-x-2 bg-primary hide-scrollbar"
       >
         <div class="inline-flex flex-1 space-x-2">
-          <input
-            id="mqtt-url"
-            v-model="url"
-            type="url"
-            autocomplete="off"
-            spellcheck="false"
-            class="w-full px-4 py-2 border rounded bg-primaryLight border-divider text-secondaryDark"
-            :placeholder="`${t('mqtt.url')}`"
-            :disabled="
-              connectionState === 'CONNECTED' ||
-              connectionState === 'CONNECTING'
-            "
-            @keyup.enter="isUrlValid ? toggleConnection() : null"
-          />
+          <div class="flex flex-1">
+            <input
+              id="mqtt-url"
+              v-model="url"
+              type="url"
+              autocomplete="off"
+              :class="{ error: !isUrlValid }"
+              class="flex flex-1 w-full px-4 py-2 border rounded-l bg-primaryLight border-divider text-secondaryDark"
+              :placeholder="`${$t('mqtt.url')}`"
+              :disabled="
+                connectionState === 'CONNECTED' ||
+                connectionState === 'CONNECTING'
+              "
+              @keyup.enter="isUrlValid ? toggleConnection() : null"
+            />
+            <label
+              for="client-id"
+              class="px-4 py-2 font-semibold truncate border-t border-b bg-primaryLight border-divider text-secondaryLight"
+            >
+              {{ $t("mqtt.client_id") }}
+            </label>
+            <input
+              id="client-id"
+              v-model="clientID"
+              class="flex flex-1 w-full px-4 py-2 border rounded-r bg-primaryLight border-divider text-secondaryDark"
+              spellcheck="false"
+              :disabled="
+                connectionState === 'CONNECTED' ||
+                connectionState === 'CONNECTING'
+              "
+              @keyup.enter="isUrlValid ? toggleConnection() : null"
+            />
+          </div>
           <ButtonPrimary
             id="connect"
             :disabled="!isUrlValid"
@@ -193,9 +212,11 @@ import {
   addMQTTLogLine,
   MQTTConn$,
   MQTTEndpoint$,
+  MQTTClientID$,
   MQTTLog$,
   setMQTTConn,
   setMQTTEndpoint,
+  setMQTTClientID,
   setMQTTLog,
 } from "~/newstore/MQTTSession"
 const t = useI18n()
@@ -203,6 +224,7 @@ const nuxt = useNuxt()
 const toast = useToast()
 const { subscribeToStream } = useStreamSubscriber()
 const url = useStream(MQTTEndpoint$, "", setMQTTEndpoint)
+const clientID = useStream(MQTTClientID$, "", setMQTTClientID)
 const logs = useStream(MQTTLog$, [], setMQTTLog)
 const currentTabLogs = ref<HoppRealtimeLog>([])
 const socket = useStream(MQTTConn$, new MQTTConnection(), setMQTTConn)
