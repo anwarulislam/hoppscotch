@@ -309,6 +309,8 @@
     "unsubscribe": "Unsubscribe",
     "url": "URL",
     "client_id": "Client ID",
+    "qos": "QoS",
+    "color": "Color",
     "connection_not_authorized": "This MQTT connection does not use any authentication.",
     "not_connected": "Please start a MQTT connection first.",
     "already_subscribed": "You are already subscribed to this topic."
