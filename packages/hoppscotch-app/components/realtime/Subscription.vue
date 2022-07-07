@@ -1,6 +1,59 @@
 <template>
   <SmartModal v-if="show" dialog :title="t('mqtt.new')" @close="hideModal">
     <template #body>
+      <div class="flex justify-between px-2 mb-4">
+        <div class="flex items-center">
+          <label class="font-semibold text-secondaryLight">
+            {{ t("mqtt.qos") }}
+          </label>
+          <tippy
+            ref="QoSOptions"
+            interactive
+            trigger="click"
+            theme="popover"
+            arrow
+          >
+            <template #trigger>
+              <span class="select-wrapper">
+                <ButtonSecondary
+                  class="pr-8 ml-2 rounded-none"
+                  :label="`${QoS}`"
+                />
+              </span>
+            </template>
+            <div class="flex flex-col" role="menu">
+              <SmartItem
+                v-for="item in QoSValues"
+                :key="`qos-${item}`"
+                :label="`${item}`"
+                :icon="
+                  QoS === item
+                    ? 'radio_button_checked'
+                    : 'radio_button_unchecked'
+                "
+                :active="QoS === item"
+                @click.native="
+                  () => {
+                    QoS = item
+                    QoSOptions.tippy().hide()
+                  }
+                "
+              />
+            </div>
+          </tippy>
+        </div>
+
+        <div class="flex items-center">
+          <label
+            for="select-color"
+            class="px-4 font-semibold text-secondaryLight"
+          >
+            {{ t("mqtt.color") }}
+          </label>
+          <input id="select-color" v-model="color" type="color" class="p-0" />
+        </div>
+      </div>
+
       <div class="flex flex-col px-2">
         <input
           id="selectLabelAdd"
@@ -40,6 +93,8 @@ import { useI18n, useToast } from "~/helpers/utils/composables"
 const toastr = useToast()
 const t = useI18n()
 
+const QoSOptions = ref<any>()
+
 defineProps({
   show: {
     type: Boolean,
@@ -55,7 +110,11 @@ const emit = defineEmits<{
   (e: "hide-modal"): void
   (e: "submit", body: string): void
 }>()
+
+const QoSValues = [2, 1, 0] as const
+const QoS = ref<2 | 1 | 0>(2)
 const name = ref("")
+const color = ref("#f58290")
 
 const addNewSubscription = () => {
   if (!name.value) {
@@ -66,6 +125,7 @@ const addNewSubscription = () => {
 }
 const hideModal = () => {
   name.value = ""
+  QoS.value = 2
   emit("hide-modal")
 }
 </script>

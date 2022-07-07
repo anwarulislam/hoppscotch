@@ -21,24 +21,10 @@ export type MQTTEvent = { time: number } & (
   | { type: "ERROR"; error: MQTTError }
 )
 
-export const colors = [
-  "#f58290",
-  "#00c0a5",
-  "#6776e8",
-  "#e2c31d",
-  "#189bfe",
-  "#c778f5",
-  "#bd28bd",
-  "#e87936",
-  "#486bed",
-  "#1fc84d",
-  "#0052cc",
-  "#866dff",
-]
-
 export type MQTTSubscription = {
   topic: string
   color: string
+  qos: number
 }
 
 export type ConnectionState = "CONNECTING" | "CONNECTED" | "DISCONNECTED"
@@ -193,12 +179,12 @@ export class MQTTConnection {
     }
   }
 
-  subscribe(topic: string) {
+  subscribe(sub: MQTTSubscription) {
     this.subscribing$.next(true)
     try {
-      this.mqttClient?.subscribe(topic, {
-        onSuccess: this.subSuccess.bind(this, topic),
-        onFailure: this.usubFailure.bind(this, topic),
+      this.mqttClient?.subscribe(sub.topic, {
+        onSuccess: this.subSuccess.bind(this, sub),
+        onFailure: this.usubFailure.bind(this, sub.topic),
       })
     } catch (e) {
       this.subscribing$.next(false)
@@ -207,20 +193,20 @@ export class MQTTConnection {
         type: "ERROR",
         error: {
           type: "SUBSCRIPTION_FAILED",
-          topic,
+          topic: sub.topic,
         },
       })
     }
   }
 
-  subSuccess(topic: string) {
+  subSuccess(sub: MQTTSubscription) {
     this.subscribing$.next(false)
     this.subscriptionState$.next(!this.subscriptionState$.value)
-    this.addSubscription(topic)
+    this.addSubscription(sub)
     this.addEvent({
       time: Date.now(),
       type: "SUBSCRIBED",
-      topic,
+      topic: sub.topic,
     })
   }
 
@@ -248,11 +234,12 @@ export class MQTTConnection {
     })
   }
 
-  addSubscription(topic: string) {
+  addSubscription(sub: MQTTSubscription) {
     const subscriptions = this.subscribedTopics$.getValue()
     subscriptions.push({
-      topic,
-      color: colors[subscriptions.length % colors.length],
+      topic: sub.topic,
+      color: sub.color,
+      qos: sub.qos,
     })
     this.subscribedTopics$.next(subscriptions)
   }
