@@ -21,8 +21,8 @@ export type MQTTEvent = { time: number } & (
   | { type: "ERROR"; error: MQTTError }
 )
 
-export type MQTTSubscription = {
-  topic: string
+export type MQTTTopic = {
+  name: string
   color: string
   qos: number
 }
@@ -34,7 +34,7 @@ export class MQTTConnection {
   subscriptionState$ = new BehaviorSubject<boolean>(false)
   connectionState$ = new BehaviorSubject<ConnectionState>("DISCONNECTED")
   event$: Subject<MQTTEvent> = new Subject()
-  subscribedTopics$ = new BehaviorSubject<MQTTSubscription[]>([])
+  subscribedTopics$ = new BehaviorSubject<MQTTTopic[]>([])
 
   private mqttClient: Paho.Client | undefined
   private manualDisconnect = false
@@ -179,12 +179,12 @@ export class MQTTConnection {
     }
   }
 
-  subscribe(sub: MQTTSubscription) {
+  subscribe(topic: MQTTTopic) {
     this.subscribing$.next(true)
     try {
-      this.mqttClient?.subscribe(sub.topic, {
-        onSuccess: this.subSuccess.bind(this, sub),
-        onFailure: this.usubFailure.bind(this, sub.topic),
+      this.mqttClient?.subscribe(topic.name, {
+        onSuccess: this.subSuccess.bind(this, topic),
+        onFailure: this.usubFailure.bind(this, topic.name),
       })
     } catch (e) {
       this.subscribing$.next(false)
@@ -193,20 +193,20 @@ export class MQTTConnection {
         type: "ERROR",
         error: {
           type: "SUBSCRIPTION_FAILED",
-          topic: sub.topic,
+          topic: topic.name,
         },
       })
     }
   }
 
-  subSuccess(sub: MQTTSubscription) {
+  subSuccess(topic: MQTTTopic) {
     this.subscribing$.next(false)
     this.subscriptionState$.next(!this.subscriptionState$.value)
-    this.addSubscription(sub)
+    this.addSubscription(topic)
     this.addEvent({
       time: Date.now(),
       type: "SUBSCRIBED",
-      topic: sub.topic,
+      topic: topic.name,
     })
   }
 
@@ -234,19 +234,19 @@ export class MQTTConnection {
     })
   }
 
-  addSubscription(sub: MQTTSubscription) {
+  addSubscription(topic: MQTTTopic) {
     const subscriptions = this.subscribedTopics$.getValue()
     subscriptions.push({
-      topic: sub.topic,
-      color: sub.color,
-      qos: sub.qos,
+      name: topic.name,
+      color: topic.color,
+      qos: topic.qos,
     })
     this.subscribedTopics$.next(subscriptions)
   }
 
   removeSubscription(topic: string) {
     const subscriptions = this.subscribedTopics$.getValue()
-    this.subscribedTopics$.next(subscriptions.filter((t) => t.topic !== topic))
+    this.subscribedTopics$.next(subscriptions.filter((t) => t.name !== topic))
   }
 
   disconnect() {
