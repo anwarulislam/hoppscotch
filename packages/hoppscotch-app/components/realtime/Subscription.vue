@@ -50,7 +50,12 @@
           >
             {{ t("mqtt.color") }}
           </label>
-          <input id="select-color" v-model="color" type="color" class="p-0" />
+          <input
+            id="select-color"
+            v-model="color"
+            type="color"
+            class="px-1 rounded-md"
+          />
         </div>
       </div>
 
@@ -88,6 +93,7 @@
 
 <script lang="ts" setup>
 import { ref } from "@nuxtjs/composition-api"
+import { MQTTTopic } from "~/helpers/realtime/MQTTConnection"
 import { useI18n, useToast } from "~/helpers/utils/composables"
 
 const toastr = useToast()
@@ -108,7 +114,7 @@ defineProps({
 
 const emit = defineEmits<{
   (e: "hide-modal"): void
-  (e: "submit", body: string): void
+  (e: "submit", body: MQTTTopic): void
 }>()
 
 const QoSValues = [2, 1, 0] as const
@@ -121,7 +127,14 @@ const addNewSubscription = () => {
     toastr.error(t("mqtt.invalid_topic").toString())
     return
   }
-  emit("submit", name.value)
+  emit("submit", {
+    name: name.value,
+    qos: QoS.value,
+    color: color.value,
+  })
+
+  const randomColor = Math.floor(Math.random() * 16777215).toString(16)
+  color.value = `#${randomColor}`
 }
 const hideModal = () => {
   name.value = ""

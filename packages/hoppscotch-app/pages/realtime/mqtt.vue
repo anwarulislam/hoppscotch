@@ -70,6 +70,7 @@
               <RealtimeCommunication
                 :show-event-field="index === 0"
                 :is-connected="connectionState === 'CONNECTED'"
+                class="flex-1"
                 @send-message="
                   publish(
                     index === 0
@@ -115,7 +116,7 @@
       </div>
 
       <div
-        v-if="subscriptions.length === 0"
+        v-if="topics.length === 0"
         class="flex flex-col items-center justify-center p-4 text-secondaryLight"
       >
         <img
@@ -136,7 +137,7 @@
 
       <div v-else>
         <div
-          v-for="(sub, index) in subscriptions"
+          v-for="(topic, index) in topics"
           :key="`subscription-${index}`"
           class="flex flex-col"
         >
@@ -146,17 +147,17 @@
                 class="svg-icons"
                 name="square"
                 :style="{
-                  fill: sub.color,
-                  color: sub.color,
+                  fill: topic.color,
+                  color: topic.color,
                 }"
               />
             </span>
             <span
               class="flex flex-1 min-w-0 py-2 pr-2 cursor-pointer transition group-hover:text-secondaryDark"
-              @click="openTopicAsTab(sub)"
+              @click="openTopicAsTab(topic)"
             >
               <span class="truncate">
-                {{ sub.topic }}
+                {{ topic.name }}
               </span>
             </span>
             <ButtonSecondary
@@ -166,7 +167,7 @@
               :title="t('mqtt.unsubscribe')"
               class="hidden group-hover:inline-flex"
               data-testid="unsubscribe_mqtt_subscription"
-              @click.native="unsubscribeFromTopic(sub.topic)"
+              @click.native="unsubscribeFromTopic(topic.name)"
             />
           </div>
         </div>
@@ -194,7 +195,7 @@ import debounce from "lodash/debounce"
 import {
   MQTTConnection,
   MQTTError,
-  MQTTSubscription,
+  MQTTTopic,
 } from "~/helpers/realtime/MQTTConnection"
 import {
   HoppRealtimeLog,
@@ -242,7 +243,7 @@ const subTopic = ref("")
 let worker: Worker
 const subscriptionModalShown = ref(false)
 const canSubscribe = computed(() => connectionState.value === "CONNECTED")
-const subscriptions = useReadonlyStream(socket.value.subscribedTopics$, [])
+const topics = useReadonlyStream(socket.value.subscribedTopics$, [])
 const showSubscriptionModal = (show: boolean) => {
   subscriptionModalShown.value = show
 }
@@ -361,9 +362,9 @@ const toggleConnection = () => {
 const publish = (event: { message: string; eventName: string }) => {
   socket.value?.publish(event.eventName, event.message)
 }
-const subscribeToTopic = (topic: string) => {
+const subscribeToTopic = (topic: MQTTTopic) => {
   if (canSubscribe.value) {
-    if (subscriptions.value.some((sub) => sub.topic === topic)) {
+    if (topics.value.some((t) => t.name === topic.name)) {
       return toast.error(t("mqtt.already_subscribed").toString())
     }
     socket.value.subscribe(topic)
@@ -413,18 +414,18 @@ const changeTab = (id: string) => {
     })
   }
 }
-const openTopicAsTab = (subscription: MQTTSubscription) => {
-  const { topic, color } = subscription
-  if (tabs.value.some((tab) => tab.id === topic)) {
-    return changeTab(topic)
+const openTopicAsTab = (topic: MQTTTopic) => {
+  const { name, color } = topic
+  if (tabs.value.some((tab) => tab.id === topic.name)) {
+    return changeTab(topic.name)
   }
   tabs.value.push({
-    id: topic,
-    name: topic,
+    id: name,
+    name,
     color,
     removable: true,
   })
-  changeTab(topic)
+  changeTab(topic.name)
 }
 // const closeTab = (id: string) => {
 //   const index = tabs.value.findIndex((tab) => tab.id === id)
