@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col">
+  <div class="flex flex-col flex-1">
     <div v-if="showEventField" class="flex items-center justify-between p-4">
       <input
         id="event_name"
