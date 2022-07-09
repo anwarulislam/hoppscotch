@@ -56,6 +56,24 @@
       <div :hidden="connectionState === 'CONNECTED'">
         <RealtimeConnectionConfig />
       </div>
+      <RealtimeCommunication
+        v-if="connectionState === 'CONNECTED'"
+        :show-event-field="currentTabId === 'all'"
+        :is-connected="connectionState === 'CONNECTED'"
+        @send-message="
+          publish(
+            currentTabId === 'all'
+              ? $event
+              : {
+                  message: $event.message,
+                  eventName: currentTabId,
+                }
+          )
+        "
+      />
+    </template>
+
+    <template #secondary>
       <SmartWindows :id="'communication_tab'" v-model="currentTabId">
         <template v-for="(tab, index) in tabs">
           <SmartWindow
@@ -67,21 +85,6 @@
             :icon-color="tab.color"
           >
             <div class="w-full flex flex-col">
-              <RealtimeCommunication
-                :show-event-field="index === 0"
-                :is-connected="connectionState === 'CONNECTED'"
-                class="flex-1"
-                @send-message="
-                  publish(
-                    index === 0
-                      ? $event
-                      : {
-                          message: $event.message,
-                          eventName: tab.name,
-                        }
-                  )
-                "
-              />
               <RealtimeLog
                 :title="t('mqtt.log')"
                 :log="index === 0 ? logs : currentTabLogs"
@@ -92,6 +95,7 @@
         </template>
       </SmartWindows>
     </template>
+
     <template #sidebar>
       <div
         class="sticky z-10 flex flex-col border-b rounded-t divide-y divide-dividerLight bg-primary border-dividerLight"
