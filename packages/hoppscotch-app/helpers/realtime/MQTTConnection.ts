@@ -24,7 +24,7 @@ export type MQTTEvent = { time: number } & (
 export type MQTTTopic = {
   name: string
   color: string
-  qos: number
+  qos: 2 | 1 | 0
 }
 
 export type ConnectionState = "CONNECTING" | "CONNECTED" | "DISCONNECTED"
@@ -185,6 +185,7 @@ export class MQTTConnection {
       this.mqttClient?.subscribe(topic.name, {
         onSuccess: this.subSuccess.bind(this, topic),
         onFailure: this.usubFailure.bind(this, topic.name),
+        qos: topic.qos,
       })
     } catch (e) {
       this.subscribing$.next(false)
