@@ -83,14 +83,13 @@
             :is-removable="tab.removable"
             :icon="'square'"
             :icon-color="tab.color"
+            class="flex flex-col flex-1 overflow-y-auto"
           >
-            <div class="w-full flex flex-col">
-              <RealtimeLog
-                :title="t('mqtt.log')"
-                :log="index === 0 ? logs : currentTabLogs"
-                @delete="clearLogEntries()"
-              />
-            </div>
+            <RealtimeLog
+              :title="t('mqtt.log')"
+              :log="index === 0 ? logs : currentTabLogs"
+              @delete="clearLogEntries()"
+            />
           </SmartWindow>
         </template>
       </SmartWindows>
