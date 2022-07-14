@@ -74,7 +74,11 @@
     </template>
 
     <template #secondary>
-      <SmartWindows :id="'communication_tab'" v-model="currentTabId">
+      <SmartWindows
+        :id="'communication_tab'"
+        v-model="currentTabId"
+        @sort="sortTabs"
+      >
         <template v-for="(tab, index) in tabs">
           <SmartWindow
             :id="tab.id"
@@ -430,6 +434,13 @@ const openTopicAsTab = (topic: MQTTTopic) => {
   })
   changeTab(topic.name)
 }
+
+const sortTabs = (e: { oldIndex: number; newIndex: number }) => {
+  const newTabs = [...tabs.value]
+  newTabs.splice(e.newIndex, 0, newTabs.splice(e.oldIndex, 1)[0])
+  tabs.value = newTabs
+}
+
 // const closeTab = (id: string) => {
 //   const index = tabs.value.findIndex((tab) => tab.id === id)
 //   tabs.value.splice(index, 1)
