@@ -8,6 +8,7 @@
         :list="tabEntries"
         :style="tabsWidth"
         class="flex overflow-x-auto transition hide-scrollbar"
+        @sort="sortTabs"
       >
         <transition-group
           class="flex divide-primaryDark divide-x"
@@ -32,6 +33,10 @@
                   v-if="tabMeta.icon"
                   class="svg-icons"
                   :name="tabMeta.icon"
+                  :style="{
+                    fill: tabMeta.iconColor,
+                    stroke: tabMeta.iconColor,
+                  }"
                 />
               </span>
               <span class="truncate">
@@ -94,6 +99,7 @@ const props = defineProps({
 
 const emit = defineEmits<{
   (e: "input", newTabID: string): void
+  (e: "sort", body: { oldIndex: number; newIndex: number }): void
 }>()
 
 const tabEntries = ref<Array<[string, TabMeta]>>([])
@@ -147,6 +153,16 @@ const removeTabEntry = (tabID: string) => {
   // If we tried to remove the active tabEntries, switch to first tab entry
   if (props.value === tabID)
     if (tabEntries.value.length > 0) selectTab(tabEntries.value[0][0])
+}
+
+const sortTabs = (e: {
+  oldDraggableIndex: number
+  newDraggableIndex: number
+}) => {
+  emit("sort", {
+    oldIndex: e.oldDraggableIndex,
+    newIndex: e.newDraggableIndex,
+  })
 }
 
 provide<TabProvider>("tabs-system", {
