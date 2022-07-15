@@ -77,7 +77,7 @@
       <SmartWindows
         :id="'communication_tab'"
         v-model="currentTabId"
-        @removeTab="removeTabEntry"
+        @removeTab="removeTab"
         @sort="sortTabs"
       >
         <template v-for="tab in tabs">
@@ -252,6 +252,23 @@ let worker: Worker
 const subscriptionModalShown = ref(false)
 const canSubscribe = computed(() => connectionState.value === "CONNECTED")
 const topics = useReadonlyStream(socket.value.subscribedTopics$, [])
+
+const currentTabId = ref("all")
+const defaultTab = {
+  id: "all",
+  name: "All Topics",
+  color: "var(--accent-color)",
+  removable: false,
+}
+const tabs = ref([defaultTab])
+watch(currentTabId, (tabID) => {
+  if (tabID !== "all") {
+    currentTabLogs.value = logs.value.filter((log) => {
+      return log.prefix?.includes(tabID)
+    })
+  }
+})
+
 const showSubscriptionModal = (show: boolean) => {
   subscriptionModalShown.value = show
 }
@@ -406,21 +423,8 @@ const getI18nError = (error: MQTTError): string => {
 const clearLogEntries = () => {
   logs.value = []
 }
-const currentTabId = ref("all")
-const defaultTab = {
-  id: "all",
-  name: "All Topics",
-  color: "var(--accent-color)",
-  removable: false,
-}
-const tabs = ref([defaultTab])
 const changeTab = (id: string) => {
   currentTabId.value = id
-  if (currentTabId.value !== "all") {
-    currentTabLogs.value = logs.value.filter((log) => {
-      return log.prefix?.includes(id)
-    })
-  }
 }
 const openTopicAsTab = (topic: MQTTTopic) => {
   const { name, color } = topic
@@ -442,7 +446,7 @@ const sortTabs = (e: { oldIndex: number; newIndex: number }) => {
   tabs.value = newTabs
 }
 
-const removeTabEntry = (tabID: string) => {
+const removeTab = (tabID: string) => {
   const index = tabs.value.findIndex((tab) => tab.id === tabID)
   tabs.value.splice(index, 1)
 }
