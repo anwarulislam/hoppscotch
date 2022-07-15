@@ -16,8 +16,8 @@
           appear
         >
           <button
-            v-for="([tabID, tabMeta], index) in tabEntries"
-            :key="`removable-tab-${index}`"
+            v-for="[tabID, tabMeta] in tabEntries"
+            :key="`removable-tab-${tabID}`"
             class="tab"
             :class="[{ active: value === tabID }]"
             :aria-label="tabMeta.label || ''"
@@ -52,7 +52,7 @@
               }"
               :class="[{ active: value === tabID }, 'close']"
               class="rounded my-0.5 mr-0.5 ml-4 !p-1"
-              @click.native.stop="removeTabEntry(tabID)"
+              @click.native.stop="emit('removeTab', tabID)"
             />
           </button>
         </transition-group>
@@ -100,6 +100,7 @@ const props = defineProps({
 const emit = defineEmits<{
   (e: "input", newTabID: string): void
   (e: "sort", body: { oldIndex: number; newIndex: number }): void
+  (e: "removeTab", tabID: string): void
 }>()
 
 const tabEntries = ref<Array<[string, TabMeta]>>([])

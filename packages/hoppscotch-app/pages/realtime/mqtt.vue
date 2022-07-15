@@ -77,12 +77,13 @@
       <SmartWindows
         :id="'communication_tab'"
         v-model="currentTabId"
+        @removeTab="removeTabEntry"
         @sort="sortTabs"
       >
-        <template v-for="(tab, index) in tabs">
+        <template v-for="tab in tabs">
           <SmartWindow
             :id="tab.id"
-            :key="'removable_tab_' + index"
+            :key="'removable_tab_' + tab.id"
             :label="tab.name"
             :is-removable="tab.removable"
             :icon="'square'"
@@ -91,7 +92,7 @@
           >
             <RealtimeLog
               :title="t('mqtt.log')"
-              :log="index === 0 ? logs : currentTabLogs"
+              :log="tab.id === 'all' ? logs : currentTabLogs"
               @delete="clearLogEntries()"
             />
           </SmartWindow>
@@ -441,11 +442,8 @@ const sortTabs = (e: { oldIndex: number; newIndex: number }) => {
   tabs.value = newTabs
 }
 
-// const closeTab = (id: string) => {
-//   const index = tabs.value.findIndex((tab) => tab.id === id)
-//   tabs.value.splice(index, 1)
-//   if (currentTabId.value === id) {
-//     changeTab(tabs.value[index]?.id || tabs.value[tabs.value.length - 1]?.id)
-//   }
-// }
+const removeTabEntry = (tabID: string) => {
+  const index = tabs.value.findIndex((tab) => tab.id === tabID)
+  tabs.value.splice(index, 1)
+}
 </script>
