@@ -2,6 +2,17 @@ import Paho, { ConnectionOptions } from "paho-mqtt"
 import { BehaviorSubject, Subject } from "rxjs"
 import { logHoppRequestRunToAnalytics } from "../fb/analytics"
 
+export type MQTTConnectionConfig = {
+  username?: string
+  password?: string
+  keepAlive?: string
+  cleanSession?: boolean
+  lwTopic?: string
+  lwMessage: string
+  lwQos: 2 | 1 | 0
+  lwRetain: boolean
+}
+
 export type MQTTMessage = { topic: string; message: string }
 export type MQTTError =
   | { type: "CONNECTION_NOT_ESTABLISHED"; value: unknown }
@@ -43,7 +54,7 @@ export class MQTTConnection {
     this.event$.next(event)
   }
 
-  connect(url: string, username: string, password: string) {
+  connect(url: string, clientID: string, config: MQTTConnectionConfig) {
     try {
       this.connectionState$.next("CONNECTING")
 
@@ -57,19 +68,34 @@ export class MQTTConnection {
       this.mqttClient = new Paho.Client(
         `${hostname + (pathname !== "/" ? pathname : "")}`,
         port !== "" ? Number(port) : 8081,
-        "hoppscotch"
+        clientID ?? "hoppscotch"
       )
       const connectOptions: ConnectionOptions = {
         onSuccess: this.onConnectionSuccess.bind(this),
         onFailure: this.onConnectionFailure.bind(this),
+        timeout: 3,
+        keepAliveInterval: Number(config.keepAlive) ?? 60,
+        cleanSession: config.cleanSession ?? true,
         useSSL: parseUrl.protocol !== "ws:",
       }
-      if (username !== "") {
+
+      const { username, password, lwTopic, lwMessage, lwQos, lwRetain } = config
+
+      if (username) {
         connectOptions.userName = username
       }
-      if (password !== "") {
+      if (password) {
         connectOptions.password = password
       }
+
+      if (lwTopic?.length) {
+        const willmsg = new Paho.Message(lwMessage)
+        willmsg.qos = lwQos
+        willmsg.destinationName = lwTopic
+        willmsg.retained = lwRetain
+        connectOptions.willMessage = willmsg
+      }
+
       this.mqttClient.connect(connectOptions)
       this.mqttClient.onConnectionLost = this.onConnectionLost.bind(this)
       this.mqttClient.onMessageArrived = this.onMessageArrived.bind(this)

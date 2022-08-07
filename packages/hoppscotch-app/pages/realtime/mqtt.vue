@@ -13,7 +13,7 @@
               autocomplete="off"
               :class="{ error: !isUrlValid }"
               class="flex flex-1 w-full px-4 py-2 border rounded-l bg-primaryLight border-divider text-secondaryDark"
-              :placeholder="`${$t('mqtt.url')}`"
+              :placeholder="`${t('mqtt.url')}`"
               :disabled="
                 connectionState === 'CONNECTED' ||
                 connectionState === 'CONNECTING'
@@ -24,7 +24,7 @@
               for="client-id"
               class="px-4 py-2 font-semibold truncate border-t border-b bg-primaryLight border-divider text-secondaryLight"
             >
-              {{ $t("mqtt.client_id") }}
+              {{ t("mqtt.client_id") }}
             </label>
             <input
               id="client-id"
@@ -53,8 +53,11 @@
         </div>
       </div>
 
-      <div class="h-full" :hidden="connectionState === 'CONNECTED'">
-        <RealtimeConnectionConfig />
+      <div
+        class="flex flex-col flex-1"
+        :hidden="connectionState === 'CONNECTED'"
+      >
+        <RealtimeConnectionConfig @change="onChangeConfig" />
       </div>
       <RealtimeCommunication
         v-if="connectionState === 'CONNECTED'"
@@ -202,6 +205,7 @@ import {
 import debounce from "lodash/debounce"
 import {
   MQTTConnection,
+  MQTTConnectionConfig,
   MQTTError,
   MQTTTopic,
 } from "~/helpers/realtime/MQTTConnection"
@@ -228,12 +232,14 @@ import {
   setMQTTClientID,
   setMQTTLog,
 } from "~/newstore/MQTTSession"
+
 const t = useI18n()
 const nuxt = useNuxt()
 const toast = useToast()
 const { subscribeToStream } = useStreamSubscriber()
 const url = useStream(MQTTEndpoint$, "", setMQTTEndpoint)
 const clientID = useStream(MQTTClientID$, "", setMQTTClientID)
+const config = ref<MQTTConnectionConfig>()
 const logs = useStream(MQTTLog$, [], setMQTTLog)
 const currentTabLogs = ref<HoppRealtimeLog>([])
 const socket = useStream(MQTTConn$, new MQTTConnection(), setMQTTConn)
@@ -268,6 +274,10 @@ watch(currentTabId, (tabID) => {
     })
   }
 })
+
+const onChangeConfig = (e: MQTTConnectionConfig) => {
+  config.value = e
+}
 
 const showSubscriptionModal = (show: boolean) => {
   subscriptionModalShown.value = show
@@ -379,7 +389,7 @@ onUnmounted(() => {
 const toggleConnection = () => {
   // If it is connecting:
   if (connectionState.value === "DISCONNECTED") {
-    return socket.value.connect(url.value, "", "")
+    return socket.value.connect(url.value, clientID.value, config.value)
   }
   // Otherwise, it's disconnecting.
   socket.value.disconnect()
