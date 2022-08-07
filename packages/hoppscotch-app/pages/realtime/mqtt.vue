@@ -53,7 +53,7 @@
         </div>
       </div>
 
-      <div :hidden="connectionState === 'CONNECTED'">
+      <div class="h-full" :hidden="connectionState === 'CONNECTED'">
         <RealtimeConnectionConfig />
       </div>
       <RealtimeCommunication
