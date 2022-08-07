@@ -313,7 +313,11 @@
     "color": "Color",
     "connection_not_authorized": "This MQTT connection does not use any authentication.",
     "not_connected": "Please start a MQTT connection first.",
-    "already_subscribed": "You are already subscribed to this topic."
+    "already_subscribed": "You are already subscribed to this topic.",
+    "connection_config": "Connection Config",
+    "keep_alive": "Keep Alive",
+    "clean_session": "Clean Session",
+    "ssl": "SSL"
   },
   "navigation": {
     "doc": "Docs",
