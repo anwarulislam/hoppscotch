@@ -317,7 +317,9 @@
     "connection_config": "Connection Config",
     "keep_alive": "Keep Alive",
     "clean_session": "Clean Session",
-    "ssl": "SSL"
+    "ssl": "SSL",
+    "lw_qos": "Last-Will QoS",
+    "lw_retain": "Last-Will Retain"
   },
   "navigation": {
     "doc": "Docs",
