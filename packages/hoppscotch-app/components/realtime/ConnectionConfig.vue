@@ -42,8 +42,20 @@
           />
         </div>
       </div>
-      <div class="w-2/3 px-4">
-        <div class="flex items-center justify-between">
+      <div class="w-2/3">
+        <div class="flex flex-1 border-b border-dividerLight">
+          <SmartEnvInput
+            v-model="config.lwTopic"
+            :placeholder="t('mqtt.lw_topic')"
+          />
+        </div>
+        <div class="flex flex-1 border-b border-dividerLight">
+          <SmartEnvInput
+            v-model="config.lwMessage"
+            :placeholder="t('mqtt.lw_message')"
+          />
+        </div>
+        <div class="flex items-center justify-between px-4">
           <div class="flex items-center">
             <label class="font-semibold text-secondaryLight">
               {{ t("mqtt.lw_qos") }}
