@@ -319,7 +319,9 @@
     "clean_session": "Clean Session",
     "ssl": "SSL",
     "lw_qos": "Last-Will QoS",
-    "lw_retain": "Last-Will Retain"
+    "lw_retain": "Last-Will Retain",
+    "lw_topic": "Last-Will Topic",
+    "lw_message": "Last-Will Message"
   },
   "navigation": {
     "doc": "Docs",

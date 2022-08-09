@@ -55,7 +55,7 @@
 
       <div
         class="flex flex-col flex-1"
-        :hidden="connectionState === 'CONNECTED'"
+        :class="{ '!hidden': connectionState === 'CONNECTED' }"
       >
         <RealtimeConnectionConfig @change="onChangeConfig" />
       </div>
