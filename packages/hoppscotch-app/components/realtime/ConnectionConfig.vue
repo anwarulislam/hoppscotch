@@ -77,7 +77,7 @@
               </template>
               <div class="flex flex-col" role="menu">
                 <SmartItem
-                  v-for="item in QoSValues"
+                  v-for="item in QOS_VALUES"
                   :key="`qos-${item}`"
                   :label="`${item}`"
                   :icon="
@@ -112,17 +112,17 @@
 <script setup lang="ts">
 import { ref, watch } from "@nuxtjs/composition-api"
 import { useI18n } from "~/helpers/utils/composables"
-import { MQTTConnectionConfig } from "~/helpers/realtime/MQTTConnection"
+import {
+  MQTTConnectionConfig,
+  QOS_VALUES,
+} from "~/helpers/realtime/MQTTConnection"
 
 const t = useI18n()
 const QoSOptions = ref<any>()
-const QoSValues = [2, 1, 0] as const
 
 const emit = defineEmits<{
   (e: "change", body: MQTTConnectionConfig): void
 }>()
-
-// config
 const config = ref<MQTTConnectionConfig>({
   username: "",
   password: "",

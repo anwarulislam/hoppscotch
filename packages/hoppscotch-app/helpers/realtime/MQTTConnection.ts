@@ -40,6 +40,8 @@ export type MQTTTopic = {
 
 export type ConnectionState = "CONNECTING" | "CONNECTED" | "DISCONNECTED"
 
+export const QOS_VALUES = [2, 1, 0] as const
+
 export class MQTTConnection {
   subscribing$ = new BehaviorSubject(false)
   subscriptionState$ = new BehaviorSubject<boolean>(false)

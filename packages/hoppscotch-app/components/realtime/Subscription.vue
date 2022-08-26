@@ -23,7 +23,7 @@
             </template>
             <div class="flex flex-col" role="menu">
               <SmartItem
-                v-for="item in QoSValues"
+                v-for="item in QOS_VALUES"
                 :key="`qos-${item}`"
                 :label="`${item}`"
                 :icon="
@@ -93,7 +93,7 @@
 
 <script lang="ts" setup>
 import { ref } from "@nuxtjs/composition-api"
-import { MQTTTopic } from "~/helpers/realtime/MQTTConnection"
+import { MQTTTopic, QOS_VALUES } from "~/helpers/realtime/MQTTConnection"
 import { useI18n, useToast } from "~/helpers/utils/composables"
 
 const toastr = useToast()
@@ -117,8 +117,7 @@ const emit = defineEmits<{
   (e: "submit", body: MQTTTopic): void
 }>()
 
-const QoSValues = [2, 1, 0] as const
-const QoS = ref<2 | 1 | 0>(2)
+const QoS = ref<typeof QOS_VALUES[number]>(2)
 const name = ref("")
 const color = ref("#f58290")
 
