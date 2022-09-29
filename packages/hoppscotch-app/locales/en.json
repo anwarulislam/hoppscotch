@@ -156,6 +156,7 @@
     "body": "This request does not have a body",
     "collection": "Collection is empty",
     "collections": "Collections are empty",
+    "subscription": "Subscriptions are empty",
     "documentation": "Connect to a GraphQL endpoint to view documentation",
     "endpoint": "Endpoint cannot be empty",
     "environments": "Environments are empty",
@@ -295,6 +296,8 @@
     "import_export": "Import / Export"
   },
   "mqtt": {
+    "new": "New Subscription",
+    "invalid_topic": "Please provide a topic for the subscription",
     "communication": "Communication",
     "log": "Log",
     "message": "Message",
@@ -304,7 +307,21 @@
     "topic_name": "Topic Name",
     "topic_title": "Publish / Subscribe topic",
     "unsubscribe": "Unsubscribe",
-    "url": "URL"
+    "url": "URL",
+    "client_id": "Client ID",
+    "qos": "QoS",
+    "color": "Color",
+    "connection_not_authorized": "This MQTT connection does not use any authentication.",
+    "not_connected": "Please start a MQTT connection first.",
+    "already_subscribed": "You are already subscribed to this topic.",
+    "connection_config": "Connection Config",
+    "keep_alive": "Keep Alive",
+    "clean_session": "Clean Session",
+    "ssl": "SSL",
+    "lw_qos": "Last-Will QoS",
+    "lw_retain": "Last-Will Retain",
+    "lw_topic": "Last-Will Topic",
+    "lw_message": "Last-Will Message"
   },
   "navigation": {
     "doc": "Docs",
@@ -497,13 +514,13 @@
       "title": "Theme"
     }
   },
-  "shortcodes":{
-    "actions":"Actions",
+  "shortcodes": {
+    "actions": "Actions",
     "created_on": "Created on",
-    "deleted" : "Shortcode deleted",
+    "deleted": "Shortcode deleted",
     "method": "Method",
-    "not_found":"Shortcode not found",
-    "short_code":"Short code",
+    "not_found": "Shortcode not found",
+    "short_code": "Short code",
     "url": "URL"
   },
   "show": {
@@ -514,7 +531,7 @@
   },
   "socketio": {
     "communication": "Communication",
-    "event_name": "Event Name",
+    "event_name": "Event/Topic Name",
     "events": "Events",
     "log": "Log",
     "url": "URL",

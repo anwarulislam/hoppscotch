@@ -12,11 +12,12 @@
       />
     </div>
     <div
-      class="sticky z-10 flex items-center justify-between pl-4 border-b bg-primary border-dividerLight top-upperSecondaryStickyFold"
+      class="sticky z-10 flex items-center justify-between pl-4 border-b bg-primary border-dividerLight"
+      :class="{ 'top-upperSecondaryStickyFold': showEventField }"
     >
       <span class="flex items-center">
         <label class="font-semibold text-secondaryLight">
-          {{ $t("websocket.message") }}
+          {{ t("websocket.message") }}
         </label>
         <tippy
           ref="contentTypeOptions"
@@ -28,7 +29,7 @@
           <template #trigger>
             <span class="select-wrapper">
               <ButtonSecondary
-                :label="contentType || $t('state.none').toLowerCase()"
+                :label="contentType || t('state.none').toString().toLowerCase()"
                 class="pr-8 ml-2 rounded-none"
               />
             </span>
@@ -43,7 +44,7 @@
               @click.native="
                 () => {
                   contentType = contentTypeItem
-                  $refs.contentTypeOptions.tippy().hide()
+                  contentTypeOptions.tippy().hide()
                 }
               "
             />
@@ -93,7 +94,7 @@
             v-tippy="{ theme: 'tooltip' }"
             :title="t('import.title')"
             svg="file-plus"
-            @click.native="$refs.payload.click()"
+            @click.native="payload.click()"
           />
         </label>
         <input
@@ -146,6 +147,8 @@ const toast = useToast()
 
 const linewrapEnabled = ref(true)
 const wsCommunicationBody = ref<HTMLElement>()
+const contentTypeOptions = ref<any>()
+const payload = ref<any>()
 
 const prettifyIcon = refAutoReset<"wand" | "check" | "info">("wand", 1000)
 
@@ -191,10 +194,10 @@ const sendMessage = () => {
     eventName: eventName.value,
     message: communicationBody.value,
   })
-  communicationBody.value = ""
+  clearContent()
 }
 
-const uploadPayload = async (e: InputEvent) => {
+const uploadPayload = async (e: Event) => {
   const result = await pipe(
     (e.target as HTMLInputElement).files?.[0],
     TO.fromNullable,
