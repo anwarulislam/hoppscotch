@@ -182,14 +182,14 @@
   },
   "environment": {
     "add_to_global": "গ্লোবাল যোগ করুন",
-    "added": "Environment addition",
+    "added": "পরিবেশ যোগ",
     "create_new": "নতুন পরিবেশ তৈরি করুন",
     "created": "Environment created",
     "deleted": "Environment deletion",
     "edit": "Edit Environment",
     "invalid_name": "দয়া করে পরিবেশের জন্য একটি নাম সরবরাহ করুন",
     "my_environments": "আমার পরিবেশ",
-    "nested_overflow": "nested environment variables are limited to 10 levels",
+    "nested_overflow": "এনভায়ারনমেন্ট ভেরিয়েবল সীমাবদ্ধ 10 স্তরের সীমায় একটি বিন্দু",
     "new": "New Environment",
     "no_environment": "কোন পরিবেশ নেই",
     "no_environment_description": "কোন পরিবেশ নির্বাচিত হয়নি। নিম্নলিখিত ভেরিয়েবলগুলির সাথে কী করতে চান তা নির্বাচন করুন।",
@@ -197,7 +197,7 @@
     "team_environments": "দল পরিবেশ",
     "title": "পরিবেশ",
     "updated": "Environment updated",
-    "variable_list": "Variable List"
+    "variable_list": "ভ্যারিয়েবল তালিকা"
   },
   "error": {
     "browser_support_sse": "এই ব্রাউজারটি Server Sent Events সমর্থন করে না",
