@@ -19,7 +19,6 @@ declare module '@vue/runtime-core' {
     HoppSmartAnchor: typeof import('@hoppscotch/ui')['HoppSmartAnchor']
     HoppSmartAutoComplete: typeof import('@hoppscotch/ui')['HoppSmartAutoComplete']
     HoppSmartConfirmModal: typeof import('@hoppscotch/ui')['HoppSmartConfirmModal']
-    HoppSmartInput: typeof import('@hoppscotch/ui')['HoppSmartInput']
     HoppSmartItem: typeof import('@hoppscotch/ui')['HoppSmartItem']
     HoppSmartModal: typeof import('@hoppscotch/ui')['HoppSmartModal']
     HoppSmartPicture: typeof import('@hoppscotch/ui')['HoppSmartPicture']
@@ -37,11 +36,8 @@ declare module '@vue/runtime-core' {
     TeamsInvite: typeof import('./components/teams/Invite.vue')['default']
     TeamsMembers: typeof import('./components/teams/Members.vue')['default']
     TeamsPendingInvites: typeof import('./components/teams/PendingInvites.vue')['default']
-    TeamsTable: typeof import('./components/teams/Table.vue')['default']
     Tippy: typeof import('vue-tippy')['Tippy']
     UsersInviteModal: typeof import('./components/users/InviteModal.vue')['default']
-    UsersTable: typeof import('./components/users/Table.vue')['default']
-    UsersTables: typeof import('./components/users/Tables.vue')['default']
   }
 
 }
