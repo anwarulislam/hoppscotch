@@ -1,5 +1,5 @@
 <template>
-  <div class="overflow-auto rounded-md border border-dividerDark shadow-md m-5">
+  <div class="overflow-auto rounded-md border border-dividerDark shadow-md">
     <table class="w-full">
       <thead class="bg-primaryLight">
         <tr
@@ -21,7 +21,7 @@
           <td
             v-for="(data, colIndex) in item"
             :key="colIndex"
-            @click="$emit('goToDetails', item)"
+            @click="emit('goToDetails', item)"
             class="max-w-40"
             :class="cellStyles"
           >
@@ -114,7 +114,7 @@ const props = defineProps<{
   }>
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (event: "goToDetails", item: Item): void
 }>()
 
