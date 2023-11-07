@@ -58,8 +58,8 @@
               v-for="(field, index) in filteredQueryFields"
               :key="`field-${index}`"
               :gql-field="field"
-              :jump-type-callback="handleJumpToType"
               class="p-4"
+              @jump-to-type="handleJumpToType"
             />
           </HoppSmartTab>
           <HoppSmartTab
