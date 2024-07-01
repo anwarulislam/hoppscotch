@@ -840,6 +840,7 @@
     },
     "settings": {
       "change_interceptor": "Change Interceptor",
+      "toggle_sidebar": "Toggle Sidebar",
       "change_language": "Change Language",
       "theme": {
         "black": "Black",

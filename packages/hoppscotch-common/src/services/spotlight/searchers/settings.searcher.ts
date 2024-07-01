@@ -2,7 +2,7 @@ import { Component, computed, markRaw, reactive } from "vue"
 import { useSetting } from "~/composables/settings"
 import { invokeAction } from "~/helpers/actions"
 import { getI18n } from "~/modules/i18n"
-import { HoppBgColor, applySetting } from "~/newstore/settings"
+import { HoppBgColor, applySetting, toggleSetting } from "~/newstore/settings"
 import { SpotlightSearcherResult, SpotlightService } from ".."
 import {
   SearchResult,
@@ -12,6 +12,7 @@ import {
 import IconCloud from "~icons/lucide/cloud"
 import IconGlobe from "~icons/lucide/globe"
 import IconMonitor from "~icons/lucide/monitor"
+import IconSidebar from "~icons/lucide/sidebar"
 import IconMoon from "~icons/lucide/moon"
 import IconSun from "~icons/lucide/sun"
 import IconCheckCircle from "~icons/lucide/check-circle"
@@ -99,6 +100,15 @@ export class SettingsSpotlightSearcherService extends StaticSpotlightSearcherSer
       alternates: ["language", "change language"],
       icon: markRaw(IconGlobe),
     },
+
+    toggle_sidebar: {
+      text: [
+        this.t("spotlight.section.interface"),
+        this.t("spotlight.settings.toggle_sidebar"),
+      ],
+      alternates: ["sidebar", "toggle sidebar"],
+      icon: markRaw(IconSidebar),
+    },
   })
 
   // TODO: Constuctors are no longer recommended as of dioc > 3, move to onServiceInit
@@ -150,6 +160,9 @@ export class SettingsSpotlightSearcherService extends StaticSpotlightSearcherSer
         break
       case "theme_black":
         invokeAction("settings.theme.black")
+        break
+      case "toggle_sidebar":
+        toggleSetting("SIDEBAR_ON_LEFT")
         break
     }
   }
