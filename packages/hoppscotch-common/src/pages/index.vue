@@ -235,7 +235,6 @@ const getTabName = (tab: HoppTab<HoppTabDocument>) => {
   if (tab.document.type === "request") {
     return tab.document.request.name
   } else if (tab.document.type === "test-runner") {
-    console.log(tab.document.collection.name)
     return tab.document.collection.name
   } else if (tab.document.type === "example-response") {
     return tab.document.response.name
@@ -278,7 +277,6 @@ const duplicateTab = (tabID: string) => {
       type: "request",
       request: cloneDeep(tab.value.document.request),
       isDirty: true,
-      type: "request",
     })
     tabs.setActiveTab(newTab.id)
   }
