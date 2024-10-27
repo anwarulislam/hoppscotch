@@ -175,6 +175,7 @@ declare module 'vue' {
     HttpTabHead: typeof import('./components/http/TabHead.vue')['default']
     HttpTestFolder: typeof import('./components/http/test/Folder.vue')['default']
     HttpTestRequest: typeof import('./components/http/test/Request.vue')['default']
+    HttpTestResponse: typeof import('./components/http/test/Response.vue')['default']
     HttpTestResult: typeof import('./components/http/TestResult.vue')['default']
     HttpTestResultEntry: typeof import('./components/http/TestResultEntry.vue')['default']
     HttpTestResultEnv: typeof import('./components/http/TestResultEnv.vue')['default']
