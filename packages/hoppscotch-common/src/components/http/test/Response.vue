@@ -8,11 +8,14 @@
 <script setup lang="ts">
 import { useVModel } from "@vueuse/core"
 import { computed } from "vue"
-import { HoppRequestDocument } from "~/helpers/rest/document"
-import { TestRunnerRequest } from "~/services/test-runner/test-runner.service"
+import {
+  HoppRequestDocument,
+  HoppTestRunnerDocument,
+} from "~/helpers/rest/document"
+import { HoppTab } from "~/services/tab"
 
 const props = defineProps<{
-  document: TestRunnerRequest
+  document: HoppTab<HoppTestRunnerDocument>
 }>()
 
 const emit = defineEmits<{

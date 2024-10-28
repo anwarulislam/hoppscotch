@@ -21,35 +21,43 @@
             statusCategory.className,
             'outlined text-xs rounded-md px-2 flex items-center',
           ]"
-          v-if="request.response?.statusCode"
+          v-if="statusCode"
         >
-          {{ `${request.response?.statusCode}` }}
+          {{ statusCode }}
         </span>
+
         <span
-          v-if="request.response?.isLoading"
+          v-if="requestResult?.isLoading"
           class="flex flex-col items-center"
         >
           <HoppSmartSpinner />
         </span>
       </div>
 
-      <p class="text-left text-secondaryLight text-sm">
+      <p
+        class="text-left text-secondaryLight text-sm"
+        :aria-details="`${isLoading}`"
+      >
         {{ request.endpoint }}
       </p>
     </button>
     <HttpTestTestResult
       :show-empty-message="false"
-      v-if="request.testResults"
-      :model-value="request.testResults"
+      v-if="requestResult?.testResults"
+      :model-value="requestResult.testResults"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue"
+import { useService } from "dioc/vue"
+import { computed, ref } from "vue"
 import findStatusGroup from "~/helpers/findStatusGroup"
 import { getMethodLabelColorClassOf } from "~/helpers/rest/labelColoring"
-import { TestRunnerRequest } from "~/services/test-runner/test-runner.service"
+import {
+  TestRunnerRequest,
+  TestRunnerService,
+} from "~/services/test-runner/test-runner.service"
 
 const props = withDefaults(
   defineProps<{
@@ -68,21 +76,42 @@ const props = withDefaults(
   }
 )
 
+const isLoading = ref(false)
+
+const testRunner = useService(TestRunnerService)
+
+const requestResult = computed(() => {
+  if (!props.request.requestId) return null
+  return testRunner.getRequestResults(props.request.requestId)
+})
+
+const statusCode = computed(() => {
+  return requestResult.value?.response?.type === "success" ||
+    requestResult.value?.response?.type === "fail"
+    ? requestResult.value?.response?.statusCode
+    : null
+})
+
 const statusCategory = computed(() => {
+  const def = {
+    name: "error",
+    className: "text-red-500",
+  }
+  if (!requestResult.value) return def
+  const { response } = requestResult.value
+
   if (
-    props.request?.response === null ||
-    props.request?.response === undefined ||
-    props.request?.response.type === "loading" ||
-    props.request?.response.type === "network_fail" ||
-    props.request?.response.type === "script_fail" ||
-    props.request?.response.type === "fail" ||
-    props.request?.response.type === "extension_error"
+    response === null ||
+    response === undefined ||
+    response.type === "loading" ||
+    response.type === "network_fail" ||
+    response.type === "script_fail" ||
+    response.type === "fail" ||
+    response.type === "extension_error"
   )
-    return {
-      name: "error",
-      className: "text-red-500",
-    }
-  return findStatusGroup(props.request?.response.statusCode)
+    return def
+
+  return findStatusGroup(response.statusCode)
 })
 
 const emit = defineEmits<{

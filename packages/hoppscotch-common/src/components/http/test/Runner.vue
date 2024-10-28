@@ -51,7 +51,7 @@
         <HttpTestRunnerResult
           :collection-adapter="collectionAdapter"
           :is-running="runnerState.status === 'running'"
-          @on-select-request="selectedRequest = $event"
+          @on-select-request="onSelectRequest"
         />
       </div>
 
@@ -60,10 +60,7 @@
       </div> -->
     </template>
     <template #secondary>
-      <HttpTestResponse
-        v-if="selectedRequest"
-        v-model:document="selectedRequest"
-      />
+      <HttpTestResponse v-if="doc" v-model:document="doc" />
 
       <div
         v-else-if="runnerState.status === 'running'"
@@ -118,6 +115,8 @@ const emit = defineEmits<{
   (e: "update:modelValue", val: HoppTab<HoppTestRunnerDocument>): void
 }>()
 
+const doc = useVModel(props, "modelValue", emit)
+
 const duration = ref(0)
 const avgResponse = ref(0)
 
@@ -134,7 +133,13 @@ function msToHumanReadable(ms: number) {
   return result.trim()
 }
 
-const selectedRequest = ref<TestRunnerRequest>()
+function onSelectRequest(request: TestRunnerRequest) {
+  console.log("onSelectRequest", request)
+  doc.value.document.request = request
+  const requestResult = testRunnerService.getRequestResults(request.requestId)
+  doc.value.document.response = requestResult?.response
+  doc.value.document.testResults = requestResult?.testResults
+}
 
 const collectionName = computed(() => {
   if (props.modelValue.document.type === "test-runner") {

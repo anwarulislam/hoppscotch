@@ -24,7 +24,9 @@
             />
 
             <HttpTestResultRequest
-              v-if="node.data.type === 'requests'"
+              v-if="
+                node.data.type === 'requests' && node.data.data.data.requestId
+              "
               :request="node.data.data.data"
               :request-i-d="node.id"
               :parent-i-d="node.data.data.parentIndex"
@@ -37,12 +39,12 @@
         </HoppSmartTree>
       </div>
     </HoppSmartTab>
-    <HoppSmartTab :id="'passed'" :label="`${t('tab.passed')}`">
+    <!-- <HoppSmartTab :id="'passed'" :label="`${t('tab.passed')}`">
       tab passed
     </HoppSmartTab>
     <HoppSmartTab :id="'failed'" :label="`${t('tab.failed')}`">
       tab failed
-    </HoppSmartTab>
+    </HoppSmartTab> -->
   </HoppSmartTabs>
 </template>
 

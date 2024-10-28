@@ -2,7 +2,7 @@ import { HoppCollection, HoppRESTRequest } from "@hoppscotch/data"
 import { Service } from "dioc"
 import * as E from "fp-ts/Either"
 import { cloneDeep } from "lodash-es"
-import { Ref, ref } from "vue"
+import { reactive, Ref, ref } from "vue"
 import { runTestRunnerRequest } from "~/helpers/RequestRunner"
 import {
   HoppTestRunnerDocument,
@@ -11,6 +11,19 @@ import {
 import { HoppRESTResponse } from "~/helpers/types/HoppRESTResponse"
 import { HoppTestResult } from "~/helpers/types/HoppTestResult"
 import { HoppTab } from "../tab"
+
+// Modified to remove response and testResults from the request itself
+export type TestRunnerRequest = HoppRESTRequest & {
+  requestId: string
+}
+
+// New interface for storing request results
+export interface RequestResults {
+  response?: HoppRESTResponse | null
+  isLoading: boolean
+  testResults?: HoppTestResult | null
+  error?: string
+}
 
 export type TestRunState = {
   status: "idle" | "running" | "stopped" | "error"
@@ -28,15 +41,6 @@ export type TestRunnerOptions = {
   stopRef: Ref<boolean>
 } & TestRunnerConfig
 
-export type TestRunnerRequest = HoppRESTRequest & {
-  type: "test-response"
-  response?: HoppRESTResponse | null
-  testResults?: HoppTestResult | null
-  isLoading?: boolean
-  error?: string
-  renderResults?: boolean
-}
-
 function delay(timeMS: number) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(resolve, timeMS)
@@ -49,6 +53,20 @@ function delay(timeMS: number) {
 
 export class TestRunnerService extends Service {
   public static readonly ID = "TEST_RUNNER_SERVICE"
+
+  // Map to store request results
+  protected requestResultsMap = reactive(new Map<string, RequestResults>())
+
+  // Generate unique ID for requests
+  private generateRequestId(): string {
+    return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }
+
+  // Get results for a request
+  public getRequestResults(requestId: string) {
+    return this.requestResultsMap.get(requestId)
+    // return computed(() => this.requestResultsMap.get(requestId))
+  }
 
   private getRequestPath(
     collection: HoppCollection,
@@ -81,9 +99,22 @@ export class TestRunnerService extends Service {
       throw new Error("Test execution stopped")
     }
 
+    // Generate ID if not exists
+    if (!request.requestId) {
+      request.requestId = this.generateRequestId()
+    }
+
+    // Create or get reference for results
+    let resultsRef = this.requestResultsMap.get(request.requestId)
+    if (!resultsRef) {
+      resultsRef = {
+        isLoading: true,
+      }
+      this.requestResultsMap.set(request.requestId, resultsRef)
+    }
+
     try {
-      request.isLoading = true
-      request.error = undefined
+      resultsRef.error = undefined
 
       const results = await runTestRunnerRequest(request)
 
@@ -94,8 +125,11 @@ export class TestRunnerService extends Service {
 
       if (results && E.isRight(results)) {
         const { response, testResult } = results.right
-        request.testResults = testResult
-        request.response = response
+
+        if (options.persistResponses) {
+          resultsRef.response = response
+        }
+        resultsRef.testResults = testResult
 
         if (response.type === "success" || response.type === "fail") {
           state.value.totalTime += response.meta.responseDuration
@@ -103,13 +137,12 @@ export class TestRunnerService extends Service {
         }
       } else {
         const errorMsg = "Request execution failed"
-        request.error = errorMsg
+        resultsRef.error = errorMsg
         state.value.errors.push({
           requestPath: this.getRequestPath(collection, request),
           error: errorMsg,
         })
 
-        // Stop the test run if stopOnError is true
         if (options.stopOnError) {
           state.value.status = "stopped"
           throw new Error("Test execution stopped due to error")
@@ -120,25 +153,26 @@ export class TestRunnerService extends Service {
         error instanceof Error &&
         error.message === "Test execution stopped"
       ) {
-        throw error // Re-throw stop signal
+        throw error
       }
 
       const errorMsg =
         error instanceof Error ? error.message : "Unknown error occurred"
-      request.error = errorMsg
+      resultsRef.error = errorMsg
       state.value.errors.push({
         requestPath: this.getRequestPath(collection, request),
         error: errorMsg,
       })
 
-      // Stop the test run if stopOnError is true
       if (options.stopOnError) {
         state.value.status = "stopped"
         throw new Error("Test execution stopped due to error")
       }
     } finally {
-      request.isLoading = false
+      resultsRef.isLoading = false
     }
+
+    console.log("Request results", this.requestResultsMap)
   }
 
   private async runTestCollection(
@@ -161,6 +195,7 @@ export class TestRunnerService extends Service {
           state.value.status = "stopped"
           throw new Error("Test execution stopped")
         }
+
         await this.runTestRequest(
           state,
           request as TestRunnerRequest,
@@ -184,11 +219,11 @@ export class TestRunnerService extends Service {
         error instanceof Error &&
         error.message === "Test execution stopped"
       ) {
-        throw error // Propagate stop signal
+        throw error
       }
       state.value.status = "error"
       console.error("Collection execution failed:", error)
-      throw error // Re-throw to propagate error
+      throw error
     }
   }
 
@@ -197,6 +232,9 @@ export class TestRunnerService extends Service {
     collection: HoppCollection,
     options: TestRunnerOptions
   ): Ref<TestRunState> {
+    // Clear previous results map when starting new test run
+    this.requestResultsMap.clear()
+
     const state = ref<TestRunState>({
       status: "running",
       totalRequests: collection.requests.length,

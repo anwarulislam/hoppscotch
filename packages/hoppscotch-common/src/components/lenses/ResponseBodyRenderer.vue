@@ -41,19 +41,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
-import {
-  getSuitableLenses,
-  getLensRenderers,
-  Lens,
-} from "~/helpers/lenses/lenses"
 import { useI18n } from "@composables/i18n"
 import { useVModel } from "@vueuse/core"
-import { HoppRequestDocument } from "~/helpers/rest/document"
-import { TestRunnerRequest } from "~/services/test-runner/test-runner.service"
+import { computed, ref, watch } from "vue"
+import {
+  getLensRenderers,
+  getSuitableLenses,
+  Lens,
+} from "~/helpers/lenses/lenses"
+import {
+  HoppRequestDocument,
+  HoppTestRunnerDocument,
+} from "~/helpers/rest/document"
 
 const props = defineProps<{
-  document: HoppRequestDocument | TestRunnerRequest
+  document: HoppRequestDocument | HoppTestRunnerDocument
   isEditable: boolean
 }>()
 
@@ -65,7 +67,7 @@ const emit = defineEmits<{
 const doc = useVModel(props, "document", emit)
 
 const isSavable = computed(() => {
-  if (doc.value.type === "test-response") return false
+  if (doc.value.type === "test-runner") return false
   return doc.value.response?.type === "success" && doc.value.saveContext
 })
 
@@ -120,7 +122,7 @@ watch(
       "results",
     ]
 
-    if (doc.value.type === "test-response") return
+    if (doc.value.type === "test-runner") return
 
     const { responseTabPreference } = doc.value
 
@@ -137,7 +139,7 @@ watch(
 )
 
 watch(selectedLensTab, (newLensID) => {
-  if (doc.value.type === "test-response") return
+  if (doc.value.type === "test-runner") return
   doc.value.responseTabPreference = newLensID
 })
 </script>
