@@ -4,6 +4,7 @@
     <LensesResponseBodyRenderer
       v-if="!loading && hasResponse"
       v-model:document="doc"
+      :is-editable="false"
       @save-as-example="saveAsExample"
     />
   </div>
