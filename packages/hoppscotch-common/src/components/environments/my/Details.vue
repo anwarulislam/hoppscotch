@@ -41,8 +41,16 @@
                 />
                 <HoppButtonSecondary
                   v-tippy="{ theme: 'tooltip' }"
+                  :title="t('state.bulk_mode')"
+                  :icon="IconEdit"
+                  :class="{ '!text-accent': bulkMode }"
+                  @click="bulkMode = !bulkMode"
+                />
+                <HoppButtonSecondary
+                  v-tippy="{ theme: 'tooltip' }"
                   :icon="IconPlus"
                   :title="t('add.new')"
+                  :disabled="bulkMode"
                   @click="addEnvironmentVariable"
                 />
               </div>
@@ -55,58 +63,65 @@
               :label="tab.label"
             >
               <div class="divide-y divide-dividerLight">
-                <HoppSmartPlaceholder
-                  v-if="tab.variables.length === 0"
-                  :src="`/images/states/${colorMode.value}/blockchain.svg`"
-                  :alt="tab.emptyStateLabel"
-                  :text="tab.emptyStateLabel"
-                >
-                  <template #body>
-                    <HoppButtonSecondary
-                      :label="`${t('add.new')}`"
-                      filled
-                      :icon="IconPlus"
-                      @click="addEnvironmentVariable"
-                    />
-                  </template>
-                </HoppSmartPlaceholder>
-
+                <div
+                  v-if="bulkMode"
+                  ref="bulkEditor"
+                  class="flex flex-1 flex-col"
+                ></div>
                 <template v-else>
-                  <div
-                    v-for="({ id, env }, index) in tab.variables"
-                    :key="`variable-${id}-${index}`"
-                    class="flex divide-x divide-dividerLight"
+                  <HoppSmartPlaceholder
+                    v-if="tab.variables.length === 0"
+                    :src="`/images/states/${colorMode.value}/blockchain.svg`"
+                    :alt="tab.emptyStateLabel"
+                    :text="tab.emptyStateLabel"
                   >
-                    <input
-                      v-model="env.key"
-                      v-focus
-                      class="flex flex-1 bg-transparent px-4 py-2"
-                      :placeholder="`${t('count.variable', {
-                        count: index + 1,
-                      })}`"
-                      :name="'param' + index"
-                    />
-                    <SmartEnvInput
-                      v-model="env.value"
-                      :placeholder="`${t('count.value', { count: index + 1 })}`"
-                      :envs="liveEnvs"
-                      :name="'value' + index"
-                      :secret="tab.isSecret"
-                      :select-text-on-mount="
-                        env.key ? env.key === editingVariableName : false
-                      "
-                    />
-                    <div class="flex">
+                    <template #body>
                       <HoppButtonSecondary
-                        id="variable"
-                        v-tippy="{ theme: 'tooltip' }"
-                        :title="t('action.remove')"
-                        :icon="IconTrash"
-                        color="red"
-                        @click="removeEnvironmentVariable(id)"
+                        :label="`${t('add.new')}`"
+                        filled
+                        :icon="IconPlus"
+                        @click="addEnvironmentVariable"
                       />
+                    </template>
+                  </HoppSmartPlaceholder>
+
+                  <template v-else>
+                    <div
+                      v-for="({ id, env }, index) in tab.variables"
+                      :key="`variable-${id}-${index}`"
+                      class="flex divide-x divide-dividerLight"
+                    >
+                      <input
+                        v-model="env.key"
+                        v-focus
+                        class="flex flex-1 bg-transparent px-4 py-2"
+                        :placeholder="`${t('count.variable', {
+                          count: index + 1,
+                        })}`"
+                        :name="'param' + index"
+                      />
+                      <SmartEnvInput
+                        v-model="env.value"
+                        :placeholder="`${t('count.value', { count: index + 1 })}`"
+                        :envs="liveEnvs"
+                        :name="'value' + index"
+                        :secret="tab.isSecret"
+                        :select-text-on-mount="
+                          env.key ? env.key === editingVariableName : false
+                        "
+                      />
+                      <div class="flex">
+                        <HoppButtonSecondary
+                          id="variable"
+                          v-tippy="{ theme: 'tooltip' }"
+                          :title="t('action.remove')"
+                          :icon="IconTrash"
+                          color="red"
+                          @click="removeEnvironmentVariable(id)"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  </template>
                 </template>
               </div>
             </HoppSmartTab>
@@ -148,7 +163,7 @@ import * as A from "fp-ts/Array"
 import * as E from "fp-ts/Either"
 import * as O from "fp-ts/Option"
 import { flow, pipe } from "fp-ts/function"
-import { ComputedRef, computed, ref, watch } from "vue"
+import { ComputedRef, computed, reactive, ref, watch } from "vue"
 import { uniqueID } from "~/helpers/utils/uniqueID"
 import {
   createEnvironment,
@@ -168,6 +183,15 @@ import IconHelpCircle from "~icons/lucide/help-circle"
 import IconPlus from "~icons/lucide/plus"
 import IconTrash from "~icons/lucide/trash"
 import IconTrash2 from "~icons/lucide/trash-2"
+import { useCodemirror } from "@composables/codemirror"
+import { useNestedSetting } from "~/composables/settings"
+import IconEdit from "~icons/lucide/edit"
+import {
+  parseRawKeyValueEntriesE,
+  rawKeyValueEntriesToString,
+} from "@hoppscotch/data"
+import { isEqual } from "lodash-es"
+import * as RA from "fp-ts/ReadonlyArray"
 
 type EnvironmentVariable = {
   id: number
@@ -333,6 +357,74 @@ const workingEnvID = computed(() => {
   return uniqueID()
 })
 
+const bulkMode = ref(false)
+const bulkEnvs = ref("")
+const bulkEditor = ref<any | null>(null)
+const WRAP_LINES = useNestedSetting("WRAP_LINES", "environmentVariables")
+
+useCodemirror(
+  bulkEditor,
+  bulkEnvs,
+  reactive({
+    extendedEditorConfig: {
+      mode: "text/x-yaml",
+      placeholder: `${t("state.bulk_mode_placeholder")}`,
+      lineWrapping: WRAP_LINES,
+    },
+    linter: null,
+    completer: null,
+    environmentHighlights: false,
+  })
+)
+
+watch(vars, (newVars) => {
+  if (bulkMode.value) return
+
+  try {
+    const currentBulkEnvs = bulkEnvs.value.split("\n").map((item) => ({
+      key: item.substring(0, item.indexOf(":")).trimLeft().replace(/^#/, ""),
+      value: item.substring(item.indexOf(":") + 1).trimLeft(),
+      secret: selectedEnvOption.value === "secret",
+    }))
+
+    const filteredVars = newVars
+      .filter((x) => x.env.key !== "")
+      .map((x) => x.env)
+
+    if (!isEqual(currentBulkEnvs, filteredVars)) {
+      bulkEnvs.value = rawKeyValueEntriesToString(filteredVars)
+    }
+  } catch (e) {
+    toast.error(`${t("error.something_went_wrong")}`)
+    console.error(e)
+  }
+})
+
+watch(bulkEnvs, (newBulkEnvs) => {
+  const filteredBulkEnvs = pipe(
+    parseRawKeyValueEntriesE(newBulkEnvs),
+    E.map(
+      flow(
+        RA.filter((e) => e.key !== ""),
+        RA.toArray
+      )
+    ),
+    E.getOrElse(() => [] as any[])
+  )
+
+  const envVars = vars.value.map((x) => x.env)
+
+  if (!isEqual(envVars, filteredBulkEnvs)) {
+    vars.value = filteredBulkEnvs.map((env) => ({
+      id: idTicker.value++,
+      env: {
+        ...env,
+        secret: selectedEnvOption.value === "secret",
+      },
+    }))
+  }
+})
+
 watch(
   () => props.show,
   (show) => {
@@ -371,9 +463,13 @@ watch(
 )
 
 const clearContent = () => {
-  vars.value = vars.value.filter((e) =>
-    selectedEnvOption.value === "secret" ? !e.env.secret : e.env.secret
-  )
+  if (bulkMode.value) {
+    bulkEnvs.value = ""
+  } else {
+    vars.value = vars.value.filter((e) =>
+      selectedEnvOption.value === "secret" ? !e.env.secret : e.env.secret
+    )
+  }
 
   clearIcon.value = IconDone
   toast.success(`${t("state.cleared")}`)
@@ -447,7 +543,6 @@ const saveEnvironment = () => {
   }
 
   if (props.action === "new") {
-    // Creating a new environment
     createEnvironment(
       editingName.value,
       environmentUpdated.variables,
@@ -464,14 +559,12 @@ const saveEnvironment = () => {
       workspaceType: "personal",
     })
   } else if (props.editingEnvironmentIndex === "Global") {
-    // Editing the Global environment
     setGlobalEnvVariables(environmentUpdated)
     toast.success(`${t("environment.updated")}`)
   } else if (props.editingEnvironmentIndex !== null) {
     const envID =
       environmentsStore.value.environments[props.editingEnvironmentIndex].id
 
-    // Editing an environment
     updateEnvironment(
       props.editingEnvironmentIndex,
       envID

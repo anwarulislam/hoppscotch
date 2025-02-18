@@ -42,6 +42,7 @@ export type SettingsDef = {
     httpPreRequest: boolean
     httpTest: boolean
     httpRequestVariables: boolean
+    environmentVariables: boolean
     graphqlQuery: boolean
     graphqlResponseBody: boolean
     graphqlHeaders: boolean
@@ -96,6 +97,7 @@ export const getDefaultSettings = (): SettingsDef => ({
     httpPreRequest: true,
     httpTest: true,
     httpRequestVariables: true,
+    environmentVariables: true,
     graphqlQuery: true,
     graphqlResponseBody: true,
     graphqlHeaders: false,
