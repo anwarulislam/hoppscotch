@@ -115,6 +115,7 @@ export async function calculateHawkHeader(
 
   // Calculate payload hash if needed
   if (options.includePayloadHash && options.payload) {
+    console.log("Calculating payload hash")
     const content = await getPayloadContent(options.payload)
     const contentType = options.contentType || "text/plain"
     const hashBase = `hawk.1.payload\n${contentType}\n${content}\n`

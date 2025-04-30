@@ -35,7 +35,7 @@ import {
   fetchInitialDigestAuthInfo,
   generateDigestAuthHeader,
 } from "../auth/digest"
-import { calculateHawkHeader } from "@hoppscotch/data"
+import { calculateHawkHeader } from "./hawk"
 
 export interface EffectiveHoppRESTRequest extends HoppRESTRequest {
   /**
@@ -248,7 +248,26 @@ export const getComputedAuthHeaders = async (
       })
     }
   } else if (request.auth.authType === "hawk") {
-    const { method, endpoint } = req as HoppRESTRequest
+    const { method, endpoint, headers, body } = request as HoppRESTRequest
+
+    // Get the request body for payload hash calculation
+    // const reqBody = getFinalBodyFromRequest(
+    //   request as HoppRESTRequest,
+    //   envVars,
+    //   showKeyIfSecret
+    // )
+
+    // Get the content type for payload hash calculation
+    let contentType = headers.find(
+      (h) => h.active && h.key.toLowerCase() === "content-type"
+    )?.value
+
+    // Use the body's content type if no header is found
+    if (!contentType && "body" in request && body?.contentType) {
+      contentType = body.contentType
+    }
+
+    console.log("Hawk content type", contentType)
 
     const hawkHeader = await calculateHawkHeader({
       url: parseTemplateString(endpoint, envVars), // URL
@@ -256,6 +275,10 @@ export const getComputedAuthHeaders = async (
       id: parseTemplateString(request.auth.authId, envVars),
       key: parseTemplateString(request.auth.authKey, envVars),
       algorithm: request.auth.algorithm,
+
+      // Add payload and content type for payload hash calculation
+      // payload: request.auth.includePayloadHash ? reqBody : null,
+      // contentType: request.auth.includePayloadHash ? contentType : undefined,
 
       // advanced parameters (optional)
       includePayloadHash: request.auth.includePayloadHash,
@@ -273,8 +296,10 @@ export const getComputedAuthHeaders = async (
         : undefined,
       timestamp: request.auth.timestamp
         ? parseInt(parseTemplateString(request.auth.timestamp, envVars), 10)
-        : undefined,
+        : Math.floor(Date.now() / 1000), // Default to current timestamp if not provided
     })
+
+    console.log("Hawk header", hawkHeader)
 
     headers.push({
       active: true,
